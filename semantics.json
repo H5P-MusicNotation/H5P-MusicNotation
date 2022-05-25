@@ -1,0 +1,112 @@
+[
+{
+"name": "descriptions",
+"type": "list",
+"label": "Task descriptions",
+"optional": true,
+"entity": "descriptions",
+"min": 0,
+"description": "A guide telling the user how to answer this task",
+"widgets": [
+{
+"name": "VerticalTabs",
+"label": "Default"
+}
+],
+"field": {
+"name": "desc",
+"type": "group",
+"isSubContent": true,
+"label": "Description",
+"importance": "high",
+"expanded": true,
+"fields": [
+{
+"name": "desc1",
+"label": "Description",
+"type": "text",
+"tags": [
+"p",
+"br",
+"strong",
+"em"
+],
+"optional": true,
+"widget": "html"
+},
+ {
+"name": "contents",
+"type": "list",
+"label": "Text blocks",
+"entity": "notation",
+"min": 0,
+"max": 1,
+"field": {
+"name": "question_notation",
+"type": "group",
+"label": "Notation",
+"fields": [
+{
+"name": "notationWidget",
+"type": "text",
+"description": "Add Notation",
+"optional": true,
+"default": "000000",
+"widget": "notationWidget"
+}
+]
+}}
+        ]
+    }
+},
+
+{
+"name": "taskDescriptionScore",
+"type": "group",
+"label": "Notation Editor for Answer",
+"importance": "high",
+"expanded": true,
+"fields": [
+{
+"name": "notationWidget",
+"type": "text",
+"default": "000000",
+"widget": "notationWidget"
+}
+]
+},
+
+{
+    "name": "taskDescription",
+    "label": "Task description",
+    "type": "text",
+    "widget": "html",
+    "importance": "high",
+    "description": "Describe your task here. The task description will appear above text input area.",
+    "placeholder": "Summarize the book in 500 characters ...",
+    "enterMode": "div",
+    "tags": [
+      "strong",
+      "em",
+      "u",
+      "a",
+      "ul",
+      "ol",
+      "h2",
+      "h3",
+      "hr",
+      "pre",
+      "code"
+    ]
+  },
+ 
+  
+ {
+    "name": "checkAnswer",
+    "type": "text",
+    "label": "Text for \"Check\" button",
+    "importance": "low",
+    "default": "Check",
+    "common": true
+  }
+  ]
