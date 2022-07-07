@@ -17,10 +17,7 @@
   },
   "preloadedJs": [
     {
-      "path": "scripts/essay.js"
-    },
-    {
-      "path": "scripts/inputfield.js"
+      "path": "dist/essay.js"
     }
   ],
   "preloadedCss": [
@@ -29,15 +26,15 @@
     }
   ],
   "preloadedDependencies": [
-  {
-            "machineName": "FontAwesome",
-            "majorVersion": 4,
-            "minorVersion": 5
-        },
+    {
+      "machineName": "FontAwesome",
+      "majorVersion": 4,
+      "minorVersion": 5
+    },
     {
       "machineName": "H5P.Question",
       "majorVersion": 1,
-      "minorVersion": 5
+      "minorVersion": 4
     },
     {
       "machineName": "H5P.JoubelUI",
@@ -62,10 +59,10 @@
   ],
   "editorDependencies": [
   {
-            "machineName": "H5PEditor.NotationWidget",
-            "majorVersion": 1,
-            "minorVersion": 1
-        },
+        "machineName": "H5PEditor.NotationWidget",
+        "majorVersion": 1,
+        "minorVersion": 1
+    },
     {
       "machineName": "H5PEditor.VerticalTabs",
       "majorVersion": 1,

@@ -1,19 +1,15 @@
-var H5P = H5P || {};
+// CSS Classes
+const MAIN_CONTAINER = 'h5p-essay-input-field';
+const INPUT_LABEL = 'h5p-essay-input-field-label';
+const INPUT_FIELD = 'h5p-essay-input-field-textfield';
+const WRAPPER_MESSAGE = 'h5p-essay-input-field-message-wrapper';
+const CHAR_MESSAGE = 'h5p-essay-input-field-message-char';
+const CHAR_MESSAGE_IMPORTANT = 'h5p-essay-input-field-message-char-important';
+const SAVE_MESSAGE = 'h5p-essay-input-field-message-save';
+const ANIMATION_MESSAGE = 'h5p-essay-input-field-message-save-animation';
+const EMPTY_MESSAGE = '&nbsp;';
 
-(function (EssayScore4LMS) {
-  'use strict';
-
-  // CSS Classes
-  var MAIN_CONTAINER = 'h5p-essay-input-field';
-  var INPUT_LABEL = 'h5p-essay-input-field-label';
-  var INPUT_FIELD = 'h5p-essay-input-field-textfield';
-  var WRAPPER_MESSAGE = 'h5p-essay-input-field-message-wrapper';
-  var CHAR_MESSAGE = 'h5p-essay-input-field-message-char';
-  var CHAR_MESSAGE_IMPORTANT = 'h5p-essay-input-field-message-char-important';
-  var SAVE_MESSAGE = 'h5p-essay-input-field-message-save';
-  var ANIMATION_MESSAGE = 'h5p-essay-input-field-message-save-animation';
-  var EMPTY_MESSAGE = '&nbsp;';
-
+export default class EssayinputField{
   /**
    * @constructor
    * @param {object} params - Parameters.
@@ -26,7 +22,7 @@ var H5P = H5P || {};
    * @param {object} [callbacks] - Callbacks.
    * @param {function} [callbacks.onInteracted] - Interacted callback.
    */
-  EssayScore4LMS.InputField = function (params, callbacks) {
+  constructor(params, callbacks) {
     var that = this;
 
     this.params = params;
@@ -118,7 +114,7 @@ var H5P = H5P || {};
    * Get introduction for H5P.Question.
    * @return {Object} DOM elements for introduction.
    */
-  EssayScore4LMS.InputField.prototype.getIntroduction = function () {
+  getIntroduction(){
     return this.taskDescription;
   };
 
@@ -126,7 +122,7 @@ var H5P = H5P || {};
    * Get content for H5P.Question.
    * @return {Object} DOM elements for content.
    */
-  EssayScore4LMS.InputField.prototype.getContent = function () {
+  getContent() {
     return this.content;
   };
 
@@ -134,28 +130,28 @@ var H5P = H5P || {};
    * Get current text in InputField.
    * @return {string} Current text.
    */
-  EssayScore4LMS.InputField.prototype.getText = function () {
+  getText() {
     return this.inputField.value;
   };
 
   /**
    * Disable the inputField.
    */
-  EssayScore4LMS.InputField.prototype.disable = function () {
+  disable() {
     this.inputField.disabled = true;
   };
 
   /**
    * Enable the inputField.
    */
-  EssayScore4LMS.InputField.prototype.enable = function () {
+  enable() {
     this.inputField.disabled = false;
   };
 
   /**
    * Enable the inputField.
    */
-  EssayScore4LMS.InputField.prototype.focus = function () {
+  focus() {
     this.inputField.focus();
   };
 
@@ -163,7 +159,7 @@ var H5P = H5P || {};
    * Set the text for the InputField.
    * @param {string|Object} previousState - Previous state that was saved.
    */
-  EssayScore4LMS.InputField.prototype.setText = function (previousState) {
+  setText(previousState) {
     if (typeof previousState === 'undefined') {
       return;
     }
@@ -179,14 +175,14 @@ var H5P = H5P || {};
    * Compute the remaining number of characters.
    * @return {number} Number of characters left.
    */
-  /*EssayScore4LMS.InputField.prototype.computeRemainingChars = function () {
+  /*function computeRemainingChars() {
     return this.params.maximumLength - this.inputField.value.length;
   };*/
 
   /**
    * Update character message field.
    */
-  EssayScore4LMS.InputField.prototype.updateMessageChars = function () {
+  updateMessageChars() {
     /*if (!this.params.statusBar) {
       return;
     }*/
@@ -204,7 +200,7 @@ var H5P = H5P || {};
    * Update the indicator message for saved text.
    * @param {string} saved - Message to indicate the text was saved.
    */
-  EssayScore4LMS.InputField.prototype.updateMessageSaved = function (saved) {
+  updateMessageSaved(saved) {
    /* if (!this.params.statusBar) {
       return;
     }*/
@@ -226,7 +222,7 @@ var H5P = H5P || {};
    * @param {string} message - Message text.
    * @param {boolean} important - If true, message will added a particular CSS class.
    */
-  EssayScore4LMS.InputField.prototype.setMessageChars = function (message, important) {
+  setMessageChars(message, important) {
     /*if (!this.params.statusBar) {
       return;
     }*/
@@ -255,4 +251,4 @@ var H5P = H5P || {};
     }
   };
 
-})(H5P.EssayScore4LMS);
+}

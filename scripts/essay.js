@@ -1,11 +1,22 @@
-var H5P = H5P || {};
+import {
+  jQuery as $, JoubelUI as UI, Question
+} 
+from "./globals";
+
+import EssayInputField from "./inputfield";
+
+import canvg from "canvg"
 
 /**
  * TODO: This content type needs refactoring.
  */
-H5P.EssayScore4LMS = function ($, Question) {
-  'use strict';
-  
+const EssayScore4LMS = (function () {
+
+  /**
+   * @constructor
+   * @extends Question
+   */
+
   // CSS Classes
   const SOLUTION_CONTAINER = 'h5p-essay-solution-container';
   const SOLUTION_TITLE = 'h5p-essay-solution-title';
@@ -171,7 +182,7 @@ H5P.EssayScore4LMS = function ($, Question) {
     );*/
 
     // Create InputField
-    this.inputField = new H5P.EssayScore4LMS.InputField({
+    this.inputField = new EssayInputField({
       taskDescription: this.params.taskDescription,
       //placeholderText: this.params.placeholderText,
       //maximumLength: this.params.behaviour.maximumLength,
@@ -1083,4 +1094,6 @@ H5P.EssayScore4LMS = function ($, Question) {
   EssayScore4LMS.VIEW_STATES = ['task', 'results', 'solutions'];
 
   return EssayScore4LMS;
-}(H5P.jQuery, H5P.Question);
+})();
+
+export default EssayScore4LMS;
