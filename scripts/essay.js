@@ -2,10 +2,8 @@ import {
   jQuery as $, JoubelUI as UI, Question
 } 
 from "./globals";
-
+import { Canvg } from 'canvg';
 import EssayInputField from "./inputfield";
-
-import canvg from "canvg"
 
 /**
  * TODO: This content type needs refactoring.
@@ -76,7 +74,7 @@ const EssayScore4LMS = (function () {
       config);
     this.contentId = contentId;
     this.extras = contentData;
-    console.log('*****************************hier1');
+    console.log('*****************************hier6');
     const defaultLanguage = (this.extras && this.extras.metadata) ? this.extras.metadata.defaultLanguage || 'en' : 'en';
     this.languageTag = EssayScore4LMS.formatLanguageCode(defaultLanguage);
 
@@ -137,7 +135,10 @@ const EssayScore4LMS = (function () {
     if (typeof this.previousState === 'object' && Object.keys(this.previousState).length) {
       this.updateScore();
     }
-  }
+    
+  };
+  
+ 
 
   // Extends Question
   EssayScore4LMS.prototype = Object.create(Question.prototype);
@@ -180,10 +181,67 @@ const EssayScore4LMS = (function () {
       this.params.behaviour.maximumLength ||
       (H5PIntegration && H5PIntegration.saveFreq)
     );*/
+    
+    
+    
+    /*function canvasLayer(location, id) {
+
+    this.width = $(window).width();
+    this.height = $(window).height();
+    this.element = document.createElement('canvas');
+
+    $(this.element)
+       .attr('id', id)
+       .text('unsupported browser')
+       .width(this.width)
+       .height(this.height)
+       .appendTo(location);
+
+    this.context = this.element.getContext("2d");
+    
+    start(this.element, this.context);
+}
+
+var layer = {};
+layer['background'] = new canvasLayer('body', 'background');
+console.log(layer);
+*/
+
+    
+    /*async function start() {
+    
+    
+    var width = $(window).width();
+    var height = $(window).height();
+    var element = document.createElement('canvas');
+    $(element)
+       .attr('id', 'background')
+       .text('unsupported browser')
+       .width(width)
+       .height(height)
+       .appendTo('body');
+
+    var context = element.getContext("2d");
+  
+  const v = Canvg.fromString(context, '<svg width="600" height="600"><text x="50" y="50">Hello World!</text></svg>');
+
+
+  // Start SVG rendering with animations and mouse handling.
+  v.start();
+
+  window.onbeforeunload = () => {
+    v.stop();
+  }
+}
+
+start();*/
+
+
 
     // Create InputField
     this.inputField = new EssayInputField({
       taskDescription: this.params.taskDescription,
+      taskDescriptionScore: this.params.taskDescriptionScore,
       //placeholderText: this.params.placeholderText,
       //maximumLength: this.params.behaviour.maximumLength,
       //remainingChars: this.params.remainingChars,
@@ -198,7 +256,7 @@ const EssayScore4LMS = (function () {
         that.handleInput();
       })
     });
-
+   
     this.setViewState(this.previousState && this.previousState.viewState || 'task');
     if (this.viewState === 'results') {
       // Need to wait until DOM is ready for us
@@ -230,9 +288,29 @@ const EssayScore4LMS = (function () {
     this.content = this.inputField.getContent();
     this.setContent(this.content);
 
+
+    console.log(" vor addButtons");
+    console.log(this.content);
+
     // Register Buttons
-    this.addButtons();
+    this.addButtons(this.content);
+    
+    
+    
+/*    console.log("load document");
+     $(document).ready(function(){
+    console.log("Page loaded**********");
+  $('#svg_output').load(function(){
+  console.log("Page loaded.");
+    alert("Page loaded.");
+  });
+});*/
+    
+    
+    
   };
+  
+  
 
   /**
    * Add all the buttons that shall be passed to H5P.Question.
@@ -278,6 +356,10 @@ const EssayScore4LMS = (function () {
    */
   EssayScore4LMS.prototype.handleCheckAnswer = function (params) {
     const that = this;
+
+
+    console.log('params');
+    console.log(params);
 
     params = EssayScore4LMS.extend({
       skipXAPI: false

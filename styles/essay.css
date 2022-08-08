@@ -1,6 +1,20 @@
+@import '~verovioscoreeditor/src/styles/VerovioScoreEditor.css';
+
+
 @keyframes h5p-essay-input-field-message-save-opacity {
   from {opacity: 0;}
   to {opacity: 1;}
+}
+
+.h5p-notation-widget{
+  height: 400px !important;
+}
+
+.vse-container{
+  position: relative !important;
+  height: 500px !important;
+  overflow: scroll !important;
+  border:1px solid black !important;
 }
 
 .h5p-essay {
