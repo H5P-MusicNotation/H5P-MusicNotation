@@ -1,7 +1,7 @@
 import {
   jQuery as $, JoubelUI as UI, Question
-} 
-from "./globals";
+}
+  from "./globals";
 import { Canvg } from 'canvg';
 import EssayInputField from "./inputfield";
 
@@ -18,9 +18,6 @@ const EssayScore4LMS = (function () {
   // CSS Classes
   const SOLUTION_CONTAINER = 'h5p-essay-solution-container';
   const SOLUTION_TITLE = 'h5p-essay-solution-title';
-  //const SOLUTION_INTRODUCTION = 'h5p-essay-solution-introduction';
- // const SOLUTION_SAMPLE = 'h5p-essay-solution-sample';
-  //const SOLUTION_SAMPLE_TEXT = 'h5p-essay-solution-sample-text';
 
   // The H5P feedback right now only expects true (green)/false (red) feedback, not neutral feedback
   const FEEDBACK_EMPTY = '<span class="h5p-essay-feedback-empty">...</span>';
@@ -37,6 +34,7 @@ const EssayScore4LMS = (function () {
       return;
     }
 
+
     // Inheritance
     Question.call(this, 'essay');
 
@@ -45,36 +43,11 @@ const EssayScore4LMS = (function () {
       {
         media: {},
         taskDescription: '',
-        //solution: {},
-        //keywords: [],
-        //overallFeedback: [],
-        /*behaviour: {
-          minimumLength: 0,
-          inputFieldSize: 10,
-          enableCheckButton: true,
-          enableRetry: true,
-          ignoreScoring: false,
-          pointsHost: 1
-        },*/
-        checkAnswer: 'Check'
-        //submitAnswer: 'Submit'
-        //tryAgain: 'Retry'
-        //showSolution: 'Show solution'
-        //feedbackHeader: 'Feedback'
-        //solutionTitle: 'Sample solution'
-        //remainingChars: 'Remaining characters: @chars'
-        //notEnoughChars: 'You must enter at least @chars characters!'
-        //messageSave: 'saved'
-        //ariaYourResult: 'You got @score out of @total points'
-        //ariaNavigatedToSolution: 'Navigated to newly included sample solution after textarea.'
-        //ariaCheck: 'Check the answers.'
-        //ariaShowSolution: 'Show the solution. You will be provided with a sample solution.'
-       // ariaRetry: 'Retry the task. You can improve your previous answer if the author allowed that.'
+        checkAnswer: 'Submit',
       },
       config);
     this.contentId = contentId;
     this.extras = contentData;
-    console.log('*****************************hier6');
     const defaultLanguage = (this.extras && this.extras.metadata) ? this.extras.metadata.defaultLanguage || 'en' : 'en';
     this.languageTag = EssayScore4LMS.formatLanguageCode(defaultLanguage);
 
@@ -90,55 +63,9 @@ const EssayScore4LMS = (function () {
     }
 
     this.isAnswered = this.previousState && this.previousState.inputField && this.previousState.inputField !== '' || false;
-    /*
-     * this.params.behaviour.enableSolutionsButton and this.params.behaviour.enableRetry are used by
-     * contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-8} and
-     * {@link https://h5p.org/documentation/developers/contracts#guides-header-9}
-     */
-    //this.params.behaviour.enableSolutionsButton = (typeof this.params.solution.sample !== 'undefined' && this.params.solution.sample !== '');
-    //this.params.behaviour.enableRetry = this.params.behaviour.enableRetry || false;
-
-    // Determine the minimum number of characters that should be entered
-   /* this.params.behaviour.minimumLength = this.params.behaviour.minimumLength || 0;
-    if (this.params.behaviour.maximumLength !== undefined) {
-      this.params.behaviour.minimumLength = Math.min(this.params.behaviour.minimumLength, this.params.behaviour.maximumLength);
-    }*/
-
-    // map function
-    const toPoints = function (keyword) {
-      return (keyword.keyword && keyword.options && keyword.options.points || 0) * (keyword.options.occurrences || 1);
-    };
-
-    // reduce function
-    const sum = function (a, b) {
-      return a + b;
-    };
-
-    // scoreMax = Maximum number of points available by all keyword groups
-    /*const scoreMax = this.params.keywords
-      .map(toPoints)
-      .reduce(sum, 0);*/
-
-    // scoreMastering: score indicating mastery and maximum number on progress bar (can be < scoreMax)
-    /*this.scoreMastering = this.params.behaviour.percentageMastering === undefined ?
-      scoreMax :
-      this.params.behaviour.percentageMastering * scoreMax / 100;*/
-
-    // scorePassing: score to pass the task (<= scoreMastering)
-    /*this.scorePassing = Math.min(
-      this.getMaxScore(),
-      this.params.behaviour.percentagePassing * scoreMax / 100 || 0);*/
-
-    //this.solution = this.buildSolution();
-
-    // Re-create score
-    if (typeof this.previousState === 'object' && Object.keys(this.previousState).length) {
-      this.updateScore();
-    }
-    
   };
-  
- 
+
+
 
   // Extends Question
   EssayScore4LMS.prototype = Object.create(Question.prototype);
@@ -150,91 +77,58 @@ const EssayScore4LMS = (function () {
   EssayScore4LMS.prototype.registerDomElements = function () {
     const that = this;
 
-    // Set optional media
-    const media = (this.params.media) ? this.params.media.type : undefined;
-    if (media && media.library) {
-      const type = media.library.split(' ')[0];
-      if (type === 'H5P.Image') {
-        if (media.params.file) {
-          this.setImage(media.params.file.path, {
-            disableImageZooming: this.params.media.disableImageZooming,
-            alt: media.params.alt,
-            title: media.params.title
-          });
-        }
-      }
-      else if (type === 'H5P.Video') {
-        if (media.params.sources) {
-          this.setVideo(media);
-        }
-      }
-      else if (type === 'H5P.Audio') {
-        if (media.params.files) {
-          this.setAudio(media);
-        }
-      }
-    }
 
-    // Check whether status bar is needed
-    /*const statusBar = (
-      this.params.behaviour.minimumLength ||
-      this.params.behaviour.maximumLength ||
-      (H5PIntegration && H5PIntegration.saveFreq)
-    );*/
-    
-    
-    
-    /*function canvasLayer(location, id) {
+    // function canvasLayer(location, id) {
 
-    this.width = $(window).width();
-    this.height = $(window).height();
-    this.element = document.createElement('canvas');
+    //   this.width = $(window).width();
+    //   this.height = $(window).height();
+    //   this.element = document.createElement('canvas');
 
-    $(this.element)
-       .attr('id', id)
-       .text('unsupported browser')
-       .width(this.width)
-       .height(this.height)
-       .appendTo(location);
+    //   $(this.element)
+    //     .attr('id', id)
+    //     .text('unsupported browser')
+    //     .width(this.width)
+    //     .height(this.height)
+    //     .appendTo(location);
 
-    this.context = this.element.getContext("2d");
-    
-    start(this.element, this.context);
-}
+    //   this.context = this.element.getContext("2d");
 
-var layer = {};
-layer['background'] = new canvasLayer('body', 'background');
-console.log(layer);
-*/
+    //   start(this.element, this.context);
+    // }
 
-    
-    /*async function start() {
-    
-    
-    var width = $(window).width();
-    var height = $(window).height();
-    var element = document.createElement('canvas');
-    $(element)
-       .attr('id', 'background')
-       .text('unsupported browser')
-       .width(width)
-       .height(height)
-       .appendTo('body');
-
-    var context = element.getContext("2d");
-  
-  const v = Canvg.fromString(context, '<svg width="600" height="600"><text x="50" y="50">Hello World!</text></svg>');
+    // var layer = {};
+    // layer['background'] = new canvasLayer('body', 'background');
+    // console.log(layer);
 
 
-  // Start SVG rendering with animations and mouse handling.
-  v.start();
 
-  window.onbeforeunload = () => {
-    v.stop();
-  }
-}
+    // async function start() {
 
-start();*/
+
+    //   var width = $(window).width();
+    //   var height = $(window).height();
+    //   var element = document.createElement('canvas');
+    //   $(element)
+    //     .attr('id', 'background')
+    //     .text('unsupported browser')
+    //     .width(width)
+    //     .height(height)
+    //     .appendTo('body');
+
+    //   var context = element.getContext("2d");
+
+    //   const v = Canvg.fromString(context, '<svg width="600" height="600"><text x="50" y="50">Hello World!</text></svg>');
+
+
+    //   // Start SVG rendering with animations and mouse handling.
+    //   v.start();
+
+    //   window.onbeforeunload = () => {
+    //     v.stop();
+    //   }
+    // }
+
+    // start();
 
 
 
@@ -242,10 +136,6 @@ start();*/
     this.inputField = new EssayInputField({
       taskDescription: this.params.taskDescription,
       taskDescriptionScore: this.params.taskDescriptionScore,
-      //placeholderText: this.params.placeholderText,
-      //maximumLength: this.params.behaviour.maximumLength,
-      //remainingChars: this.params.remainingChars,
-     // inputFieldSize: this.params.behaviour.inputFieldSize,
       previousState: this.previousState
       //statusBar: statusBar
     }, {
@@ -256,7 +146,7 @@ start();*/
         that.handleInput();
       })
     });
-   
+
     this.setViewState(this.previousState && this.previousState.viewState || 'task');
     if (this.viewState === 'results') {
       // Need to wait until DOM is ready for us
@@ -270,14 +160,14 @@ start();*/
         that.handleCheckAnswer({ skipXAPI: true });
         that.showSolutions();
         // We need the retry button if the mastering score has not been reached or scoring is irrelevant
-       /* if (that.getScore() < that.getMaxScore() || that.params.behaviour.ignoreScoring || that.getMaxScore() === 0) {
-          if (that.params.behaviour.enableRetry) {
-            that.showButton('try-again');
-          }
-        }
-        else {
-          that.hideButton('try-again');
-        }*/
+        /* if (that.getScore() < that.getMaxScore() || that.params.behaviour.ignoreScoring || that.getMaxScore() === 0) {
+           if (that.params.behaviour.enableRetry) {
+             that.showButton('try-again');
+           }
+         }
+         else {
+           that.hideButton('try-again');
+         }*/
       });
     }
 
@@ -294,23 +184,9 @@ start();*/
 
     // Register Buttons
     this.addButtons(this.content);
-    
-    
-    
-/*    console.log("load document");
-     $(document).ready(function(){
-    console.log("Page loaded**********");
-  $('#svg_output').load(function(){
-  console.log("Page loaded.");
-    alert("Page loaded.");
-  });
-});*/
-    
-    
-    
   };
-  
-  
+
+
 
   /**
    * Add all the buttons that shall be passed to H5P.Question.
@@ -331,14 +207,14 @@ start();*/
     // Check answer button
     that.addButton('check-answer', that.params.checkAnswer, function () {
       that.handleCheckAnswer();
-    } 
-   /* this.params.behaviour.enableCheckButton, {
-      'aria-label': this.params.ariaCheck
-    }, */
-   /* {
-      contentData: this.extras,
-      textIfSubmitting: this.params.submitAnswer,
-    }*/
+    }
+      /* this.params.behaviour.enableCheckButton, {
+         'aria-label': this.params.ariaCheck
+       }, */
+      /* {
+         contentData: this.extras,
+         textIfSubmitting: this.params.submitAnswer,
+       }*/
     );
 
     // Retry button
@@ -384,9 +260,9 @@ start();*/
     that.isAnswered = true;
     that.handleEvaluation(params);
 
-   /* if (that.params.behaviour.enableSolutionsButton === true) {
-      that.showButton('show-solution');
-    }*/
+    /* if (that.params.behaviour.enableSolutionsButton === true) {
+       that.showButton('show-solution');
+     }*/
     that.hideButton('check-answer');
   };
 
@@ -445,7 +321,7 @@ start();*/
    */
   EssayScore4LMS.prototype.getScore = function () {
     // Return value is rounded because reporting module for moodle's H5P plugin expects integers
-    return  Math.round(this.score);
+    return Math.round(this.score);
   };
 
   /**
@@ -544,11 +420,11 @@ start();*/
    * Update score.
    * @param {object} results Results.
    */
- /* EssayScore4LMS.prototype.updateScore = function (results) {
-    results = results || this.computeResults();
-    this.score = Math.min(this.computeScore(results), this.getMaxScore());
-  };
-*/
+  /* EssayScore4LMS.prototype.updateScore = function (results) {
+     results = results || this.computeResults();
+     this.score = Math.min(this.computeScore(results), this.getMaxScore());
+   };
+ */
   /**
    * Handle the evaluation.
    * @param {object} [params = {}] Parameters.
@@ -569,7 +445,7 @@ start();*/
     }*/
 
     // Not all keyword groups might be necessary for mastering
-   // this.updateScore(results);
+    // this.updateScore(results);
     /*const textScore = H5P.Question
       .determineOverallFeedback(this.params.overallFeedback, this.getScore() / this.getMaxScore())
       .replace('@score', this.getScore())
@@ -616,10 +492,10 @@ start();*/
     solutionTitle.innerHTML = this.params.solutionTitle;
     solution.appendChild(solutionTitle);*/
 
-   /* const solutionIntroduction = document.createElement('div');
-    solutionIntroduction.classList.add(SOLUTION_INTRODUCTION);
-    solutionIntroduction.innerHTML = this.params.solution.introduction;
-    solution.appendChild(solutionIntroduction);*/
+    /* const solutionIntroduction = document.createElement('div');
+     solutionIntroduction.classList.add(SOLUTION_INTRODUCTION);
+     solutionIntroduction.innerHTML = this.params.solution.introduction;
+     solution.appendChild(solutionIntroduction);*/
 
     const solutionSample = document.createElement('div');
     solutionSample.classList.add(SOLUTION_SAMPLE);
@@ -646,12 +522,12 @@ start();*/
     const results = [];
 
     // Should not happen, but just to be sure ...
-   // this.params.keywords = this.params.keywords || [];
+    // this.params.keywords = this.params.keywords || [];
 
     // Filter out keywords that have not been set.
-   /* this.params.keywords = this.params.keywords.filter(function (element) {
-      return typeof element.keyword !== 'undefined';
-    });*/
+    /* this.params.keywords = this.params.keywords.filter(function (element) {
+       return typeof element.keyword !== 'undefined';
+     });*/
 
     /*this.params.keywords.forEach(function (alternativeGroup) {
       const resultsGroup = [];
@@ -723,9 +599,9 @@ start();*/
    */
   EssayScore4LMS.prototype.computeScore = function (results) {
     let score = 0;
-   /* this.params.keywords.forEach(function (keyword, i) {
-      score += Math.min(results[i].length, keyword.options.occurrences) * keyword.options.points;
-    });*/
+    /* this.params.keywords.forEach(function (keyword, i) {
+       score += Math.min(results[i].length, keyword.options.occurrences) * keyword.options.points;
+     });*/
     return score;
   };
 
@@ -738,37 +614,37 @@ start();*/
     const explanations = [];
 
     let word;
-//    this.params.keywords.forEach(function (keyword, i) {
-//      word = FEEDBACK_EMPTY;
-//      // Keyword was not found and feedback is provided for this case
-//      if (results[i].length === 0 && keyword.options.feedbackMissed) {
-//        if (keyword.options.feedbackMissedWord === 'keyword') {
-//          // Main keyword defined
-//          word = keyword.keyword;
-//        }
-//        explanations.push({correct: word, text: keyword.options.feedbackMissed});
-//      }
-//
-//      // Keyword found and feedback is provided for this case
-//      if (results[i].length > 0 && keyword.options.feedbackIncluded) {
-//        // Set word in front of feedback
-//        switch (keyword.options.feedbackIncludedWord) {
-//          case 'keyword':
-//            // Main keyword defined
-//            word = keyword.keyword;
-//            break;
-//          case 'alternative':
-//            // Alternative that was found
-//            word = results[i][0].keyword;
-//            break;
-//          case 'answer':
-//            // Answer matching an alternative at the learner typed it
-//            word = results[i][0].match;
-//            break;
-//        }
-//        explanations.push({correct: word, text: keyword.options.feedbackIncluded});
-//      }
-//    });
+    //    this.params.keywords.forEach(function (keyword, i) {
+    //      word = FEEDBACK_EMPTY;
+    //      // Keyword was not found and feedback is provided for this case
+    //      if (results[i].length === 0 && keyword.options.feedbackMissed) {
+    //        if (keyword.options.feedbackMissedWord === 'keyword') {
+    //          // Main keyword defined
+    //          word = keyword.keyword;
+    //        }
+    //        explanations.push({correct: word, text: keyword.options.feedbackMissed});
+    //      }
+    //
+    //      // Keyword found and feedback is provided for this case
+    //      if (results[i].length > 0 && keyword.options.feedbackIncluded) {
+    //        // Set word in front of feedback
+    //        switch (keyword.options.feedbackIncludedWord) {
+    //          case 'keyword':
+    //            // Main keyword defined
+    //            word = keyword.keyword;
+    //            break;
+    //          case 'alternative':
+    //            // Alternative that was found
+    //            word = results[i][0].keyword;
+    //            break;
+    //          case 'answer':
+    //            // Answer matching an alternative at the learner typed it
+    //            word = results[i][0].match;
+    //            break;
+    //        }
+    //        explanations.push({correct: word, text: keyword.options.feedbackIncluded});
+    //      }
+    //    });
 
     if (explanations.length > 0) {
       // Sort "included" before "not included", but keep order otherwise
@@ -808,17 +684,17 @@ start();*/
 
     // Additional xAPI verbs that might be useful for making analytics easier
     this.trigger(this.createEssayXAPIEvent('passed'));
-   /* if (!this.params.behaviour.ignoreScoring && this.getMaxScore() > 0) {
-      if (this.getScore() < this.scorePassing) {
-        this.trigger(this.createEssayXAPIEvent('failed'));
-      }
-      else {
-        this.trigger(this.createEssayXAPIEvent('passed'));
-      }
-      if (this.getScore() >= this.getMaxScore()) {
-        this.trigger(this.createEssayXAPIEvent('mastered'));
-      }
-    }*/
+    /* if (!this.params.behaviour.ignoreScoring && this.getMaxScore() > 0) {
+       if (this.getScore() < this.scorePassing) {
+         this.trigger(this.createEssayXAPIEvent('failed'));
+       }
+       else {
+         this.trigger(this.createEssayXAPIEvent('passed'));
+       }
+       if (this.getScore() >= this.getMaxScore()) {
+         this.trigger(this.createEssayXAPIEvent('mastered'));
+       }
+     }*/
   };
 
   /**
@@ -856,8 +732,8 @@ start();*/
      * pattern it if the criteria for a question are complex and correct
      * responses cannot be exhaustively listed. They can't.
      */
-     console.log('getxAPIDefinition');
-     console.log(definition);
+    console.log('getxAPIDefinition');
+    console.log(definition);
     return definition;
   };
 
@@ -870,7 +746,7 @@ start();*/
 
     xAPIEvent.setScoredResult(this.getScore(), this.getScore(), this, true, this.isPassed());
     xAPIEvent.data.statement.result.response = this.inputField.getText();
-    
+
     console.log('getXAPIAnswerEvent');
     console.log(xAPIEvent);
     console.log('**************************');
@@ -895,7 +771,7 @@ start();*/
 
     while (((pos = haystack.indexOf(needle))) !== -1 && needle !== '') {
       if (H5P.TextUtilities.isIsolated(needle, haystack)) {
-        result.push({'keyword': needle, 'match': needle, 'index': front + pos});
+        result.push({ 'keyword': needle, 'match': needle, 'index': front + pos });
       }
       front += pos + needle.length;
       haystack = haystack.substr(pos + needle.length);
@@ -928,9 +804,9 @@ start();*/
     const regexp = new RegExp(needle.replace(/\*/g, EssayScore4LMS.CHARS_WILDCARD + '+'), this.getRegExpModifiers(caseSensitive));
     const result = [];
     let match;
-    while ((match = regexp.exec(haystack)) !== null ) {
-      if (H5P.TextUtilities.isIsolated(match[0], haystack, {'index': match.index})) {
-        result.push({'keyword': needle, 'match': match[0], 'index': match.index});
+    while ((match = regexp.exec(haystack)) !== null) {
+      if (H5P.TextUtilities.isIsolated(match[0], haystack, { 'index': match.index })) {
+        result.push({ 'keyword': needle, 'match': match[0], 'index': match.index });
       }
     }
     return result;
@@ -956,10 +832,10 @@ start();*/
     for (let size = -windowSize; size <= windowSize; size++) {
       for (let pos = 0; pos < haystack.length; pos++) {
         const straw = haystack.substr(pos, needle.length + size);
-        if (H5P.TextUtilities.areSimilar(needle, straw) && H5P.TextUtilities.isIsolated(straw, haystack, {'index': pos})) {
+        if (H5P.TextUtilities.areSimilar(needle, straw) && H5P.TextUtilities.isIsolated(straw, haystack, { 'index': pos })) {
           // This will only add the match if it's not a duplicate that we found already in the proximity of pos
           if (!this.contains(results, pos)) {
-            results.push({'keyword': needle, 'match': straw, 'index': pos});
+            results.push({ 'keyword': needle, 'match': straw, 'index': pos });
           }
         }
       }
@@ -1060,7 +936,7 @@ start();*/
       for (let key in arguments[i]) {
         if (Object.prototype.hasOwnProperty.call(arguments[i], key)) {
           if (typeof arguments[0][key] === 'object' &&
-              typeof arguments[i][key] === 'object') {
+            typeof arguments[i][key] === 'object') {
             this.extend(arguments[0][key], arguments[i][key]);
           }
           else {
@@ -1131,10 +1007,10 @@ start();*/
       return; // may not be attached to the DOM yet
     }
 
-   // this.inputField.updateMessageSaved(this.params.messageSave);
+    // this.inputField.updateMessageSaved(this.params.messageSave);
 
     return {
-      inputField: this.inputField.getText(),
+      inputField: this.inputField.getMei(),
       viewState: this.viewState
     };
   };

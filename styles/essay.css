@@ -1,24 +1,12 @@
 @import '~verovioscoreeditor/src/styles/VerovioScoreEditor.css';
 
-
-@keyframes h5p-essay-input-field-message-save-opacity {
-  from {opacity: 0;}
-  to {opacity: 1;}
-}
-
-.h5p-notation-widget{
-  height: 400px !important;
-}
-
 .vse-container{
   position: relative !important;
-  height: 500px !important;
+  height: auto; /*500px !important;**/
   overflow: scroll !important;
   border:1px solid black !important;
 }
 
-.h5p-essay {
-}
 .h5p-essay .h5p-essay-title {
   width: auto;
   overflow-y: auto;
@@ -109,4 +97,59 @@
 
 .h5p-essay .h5p-question-explanation-container {
   margin: 0 1em;
+}
+
+.essay-input{
+  display: none
+}
+
+/* .fullscreenBtn{
+  position: absolute; 
+  top: 0; 
+  right: 0; 
+  bottom: 0; 
+  left: 0;  
+}
+
+.fullscreenBtn{
+  position: absolute;
+  z-index: 100;
+  top: 0;
+  right: 0
+}
+
+.fullscreenBtn{
+  position: absolute;
+  background: transparent;
+  border: none !important;
+  font-size:0;
+} */
+
+.fullscreen{
+  width: 100%;
+  height: 100% !important;
+}
+
+.h5p-iframe{
+  height: 1000px !important;
+  position: absolute;
+  border: none;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.h5p-iframe > body{
+  height: 100% !important;
+}
+
+.h5p-content, .h5p-container, .h5p-question-content > div, .vse-container{
+  height: 100% !important;
+}
+
+.h5p-question-content{
+  height: 90% !important;
+}
+
+#fileSelectGroup{
+  position: unset !important;
 }

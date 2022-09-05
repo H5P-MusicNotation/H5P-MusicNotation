@@ -32,14 +32,11 @@ var config = {
       // //   }]
       // },
       
-        test: /\.scss$/i,
+        test: /\.css$/,
         use: [
           MiniCssExtractPlugin.loader,
           "css-loader",
-          {
-            loader: "postcss-loader",
-          },
-          "sass-loader"
+  
         ]
       },
       {

@@ -1,5 +1,5 @@
 {
-  "name": "s4lmsEssay",
+  "name": "s4lmsessay",
   "version": "1.0.0",
   "description": "",
   "browserslist": [
@@ -10,22 +10,30 @@
   },
   "scripts": {
     "build": "./node_modules/.bin/webpack",
-    "watch": "./node_modules/.bin/webpack --watch"
+    "watch": "./node_modules/.bin/webpack --watch --mode development"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ava": "^4.1.0",
+    "babel": "^6.23.0",
     "babel-loader": "^8.2.3",
-    "canvg": "^4.0.0",
+    "base64url": "^3.0.1",
+    "blueimp-md5": "^2.19.0",
+    "canvg": "^4.0.1",
+    "crypto": "^1.0.1",
     "css-loader": "^6.7.1",
     "file-loader": "^6.2.0",
     "h5p-lib-controls": "^0.0.15",
     "mini-css-extract-plugin": "^2.6.0",
+    "node-sass": "^7.0.1",
     "postcss-loader": "^6.2.1",
     "sass-loader": "^12.6.0",
-    "verovioscoreeditor": "^1.2.7",
+    "style-loader": "^3.3.1",
+    "verovioscoreeditor": "^1.2.14",
     "webpack": "^5.70.0",
+    "webpack-bundle-analyzer": "^4.5.0",
     "webpack-cli": "^4.9.2"
   }
 }
