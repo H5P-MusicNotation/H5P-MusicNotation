@@ -1,7 +1,7 @@
-import EssayScore4LMS from "./essay"
-import "../styles/essay.css"
-import FileUploader from "./fileuploader"
+import AnalysisScore4LMS from "./analysis.js"
+import "../styles/analysis.css"
+
 
 H5P = H5P || {};
-H5P.EssayScore4LMS = EssayScore4LMS;
+H5P.AnalysisScore4LMS = AnalysisScore4LMS;
 

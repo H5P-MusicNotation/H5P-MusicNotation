@@ -1,29 +1,54 @@
 [
   {
-    "name": "descriptions",
-    "type": "list",
-    "label": "Task descriptions",
-    "optional": true,
-    "entity": "descriptions",
-    "min": 0,
-    "description": "A guide telling the user how to answer this task",
-    "widgets": [
+    "name": "as4lControllerGroup",
+    "type": "group",
+    "description": "This group exists to bind and execute control logic for the task creation of the AnalysisScore4LMS package. This group will be visually hidden.",
+    "fields": [
       {
-        "name": "VerticalTabs",
-        "label": "Default"
+        "name": "as4lControllerWidget",
+        "type": "text",
+        "widget": "as4lController",
+        "optional": true,
+        "description": "This field holds the widget for the controller logic."
+      },
+      {
+        "name": "dataStorageGroup",
+        "type": "group",
+        "description": "In this group dummy-fields are created to transfer aditional data from content creation to content view.",
+        "fields": [
+          {
+            "name": "annotationField",
+            "type": "text",
+            "optional": true
+          },
+          {
+            "name": "viewScore",
+            "type": "text", 
+            "optional": true
+          }
+        ]
       }
-    ],
+    ]
+  },
+  {
+    "name": "paragraphs",
+    "type": "list",
+    "label": "Paragraphs",
+    "optional": true,
+    "entity": "paragraph",
+    "description": "Each paragraph may contain a text, multiple notations and multiple media",
+    "min": 0,
     "field": {
-      "name": "desc",
+      "name": "paragraph",
       "type": "group",
       "isSubContent": true,
-      "label": "Description",
+      "label": "Papragraph Content",
       "importance": "high",
       "expanded": true,
       "fields": [
         {
-          "name": "desc1",
-          "label": "Description",
+          "name": "paragraphText",
+          "label": "Paragraph text",
           "type": "text",
           "tags": [
             "p",
@@ -35,24 +60,83 @@
           "widget": "html"
         },
         {
-          "name": "contents",
+          "name": "notations",
           "type": "list",
-          "label": "Text blocks",
+          "label": "Notations",
           "entity": "notation",
           "min": 0,
-          "max": 1,
+          "optional": true,
+          "description": "Notations in paragraphs will not be interactive while solving the task.",
           "field": {
             "name": "question_notation",
             "type": "group",
             "label": "Notation",
+            "optional": true,
             "fields": [
               {
                 "name": "notationWidget",
                 "type": "text",
                 "description": "Add Notation",
                 "optional": true,
-                "default": "000000",
                 "widget": "notationWidget"
+              },
+              {
+                "name": "interactiveSVG",
+                "type": "boolean",
+                "label": "Interactive Notation",
+                "description": "When checkbox is marked, the notation will be interactive in content view, otherwise only the SVG will be used.",
+                "default": false
+              },
+              {
+                "name": "meiStorage",
+                "type": "text",
+                "optional": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "mediaList",
+          "type": "list",
+          "label": "Media",
+          "min": 0,
+          "optional": true,
+          "description": "Add any number of videos, pictures or audio",
+          "field": {
+            "name": "media",
+            "type": "group",
+            "label": "Media",
+            "importance": "medium",
+            "fields": [
+              {
+                "name": "type",
+                "type": "library",
+                "label": "Type",
+                "importance": "medium",
+                "options": [
+                  "H5P.Image 1.1",
+                  "H5P.Video 1.6",
+                  "H5P.Audio 1.5"
+                ],
+                "optional": true,
+                "description": "Optional media to display under description."
+              },
+              {
+                "name": "disableImageZooming",
+                "type": "boolean",
+                "label": "Disable image zooming",
+                "importance": "low",
+                "default": false,
+                "optional": true,
+                "widget": "showWhen",
+                "showWhen": {
+                  "rules": [
+                    {
+                      "field": "type",
+                      "equals": "H5P.Image 1.1"
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -61,41 +145,152 @@
     }
   },
   {
-    "name": "taskDescriptionScore",
-    "type": "group",
-    "label": "Notation Editor for Answer",
+    "name": "selectTaskType",
+    "type": "select",
+    "label": "Task type",
+    "description": "Choose a task type to be displayed.",
     "importance": "high",
-    "expanded": true,
+    "options": [
+      {
+        "value": "noInteract",
+        "label": "No Interactive Notation"
+      },
+      {
+        "value": "harmLabels",
+        "label": "Add Harmonylabels"
+      },
+      {
+        "value": "chords",
+        "label": "Write Chords"
+      },
+      {
+        "value": "score",
+        "label": "Write Score"
+      },
+      {
+        "value": "analysisText",
+        "label": "Write Analysis (Text)"
+      }
+    ],
+    "default": "noInteract"
+  },
+  {
+    "name": "noInteractDesc",
+    "label": "Description",
+    "optional": true,
+    "type": "text",
+    "description": "All interactive notations in the solution view are disabled. Only paragraphs will be shown.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "noInteract"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "harmLabelDesc",
+    "label": "Description",
+    "optional": true,
+    "type": "text",
+    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chord annotations will be shown as '?'.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "harmLabels"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "chordDesc",
+    "label": "Description",
+    "optional": true,
+    "type": "text",
+    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chords will be not visible but replaced by rests.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "chords"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "chrodWriteDesc",
+    "label": "Description",
+    "optional": true,
+    "type": "text",
+    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chord annotations will be shown as '?'.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "score"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "scoreWriteDesc",
+    "label": "Description",
+    "optional": true,
+    "type": "text",
+    "description": "Write an Analysis about the given piece.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "analysisText"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "interactiveNotation",
+    "type": "group",
+    "label": "Interactive Notation",
+    "importance": "high",
+    "expanded": false,
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "harmLabels",
+            "chords",
+            "score",
+            "analysisText"
+          ]
+        }
+      ]
+    },
     "fields": [
       {
         "name": "notationWidget",
         "type": "text",
-        "default": "000000",
+        "optional": true,
         "widget": "notationWidget"
       }
-    ]
-  },
-  {
-    "name": "taskDescription",
-    "label": "Task description",
-    "type": "text",
-    "widget": "html",
-    "importance": "high",
-    "description": "Describe your task here. The task description will appear above text input area.",
-    "placeholder": "Summarize the book in 500 characters ...",
-    "enterMode": "div",
-    "tags": [
-      "strong",
-      "em",
-      "u",
-      "a",
-      "ul",
-      "ol",
-      "h2",
-      "h3",
-      "hr",
-      "pre",
-      "code"
     ]
   },
   {

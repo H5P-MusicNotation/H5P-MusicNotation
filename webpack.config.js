@@ -2,14 +2,16 @@ var path = require('path');
 var nodeEnv = process.env.NODE_ENV || 'development';
 var isDev = (nodeEnv !== 'production');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 
 var config = {
+  //mode: "development",
   entry: {
     dist: './scripts/entry.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'essay.js'
+    filename: 'analysis.js'
   },
   module: {
     rules: [
@@ -52,8 +54,9 @@ var config = {
   ,
   plugins: [
     new MiniCssExtractPlugin({
-    filename: "essay.css"
-      })
+    filename: "analysis.css"
+      }), 
+    new NodePolyfillPlugin()
     ]
 };
 

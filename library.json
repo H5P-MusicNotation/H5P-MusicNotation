@@ -1,28 +1,24 @@
 {
-  "title": "EssayScore4LMS",
-  "description": "Score a student's essay automatically",
+  "title": "AnalysisScore4LMS",
+  "description": "Create Analysis Tasks in H5P",
   "majorVersion": 1,
-  "minorVersion": 10,
-  "patchVersion": 5,
+  "minorVersion": 0,
+  "patchVersion": 0,
   "runnable": 1,
   "embedTypes": [
     "iframe"
   ],
   "author": "Zemfi Dreamteam",
   "license": "MIT",
-  "machineName": "H5P.EssayScore4LMS",
-  "coreApi": {
-    "majorVersion": 1,
-    "minorVersion": 14
-  },
+  "machineName": "H5P.AnalysisScore4LMS",
   "preloadedJs": [
     {
-      "path": "dist/essay.js"
+      "path": "dist/analysis.js"
     }
   ],
   "preloadedCss": [
     {
-      "path": "dist/essay.css"
+      "path": "dist/analysis.css"
     }
   ],
   "preloadedDependencies": [
@@ -34,23 +30,23 @@
     {
       "machineName": "H5P.Question",
       "majorVersion": 1,
-      "minorVersion": 4
+      "minorVersion": 5
     },
     {
       "machineName": "H5P.JoubelUI",
       "majorVersion": 1,
       "minorVersion": 3
     },
-     {
-            "machineName": "H5P.Transition",
-            "majorVersion": 1,
-            "minorVersion": 0
-        },
-        {
-            "machineName": "H5P.SoundJS",
-            "majorVersion": 1,
-            "minorVersion": 0
-        },
+    {
+      "machineName": "H5P.Transition",
+      "majorVersion": 1,
+      "minorVersion": 0
+    },
+    {
+      "machineName": "H5P.SoundJS",
+      "majorVersion": 1,
+      "minorVersion": 0
+    },
     {
       "machineName": "H5P.TextUtilities",
       "majorVersion": 1,
@@ -58,10 +54,15 @@
     }
   ],
   "editorDependencies": [
-  {
-        "machineName": "H5PEditor.NotationWidget",
-        "majorVersion": 1,
-        "minorVersion": 1
+    {
+      "machineName": "H5PEditor.NotationWidget",
+      "majorVersion": 1,
+      "minorVersion": 1
+    },
+    {
+      "machineName": "H5PEditor.As4lController",
+      "majorVersion": 1,
+      "minorVersion": 0
     },
     {
       "machineName": "H5PEditor.VerticalTabs",

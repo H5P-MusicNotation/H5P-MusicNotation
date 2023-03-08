@@ -1,0 +1,242 @@
+[
+  {
+    "name": "intro",
+    "label": "Introduction",
+    "type": "text",
+    "tags": [
+      "p",
+      "br",
+      "strong",
+      "em"
+    ],
+    "optional": true,
+    "widget": "html",
+    "description": "Write a short introductory text. Media can be added in the description sections."
+  },
+  {
+    "name": "descriptions",
+    "type": "list",
+    "label": "Paragraphs",
+    "optional": true,
+    "entity": "descriptions",
+    "min": 0,
+    "field": {
+      "name": "desc",
+      "type": "group",
+      "isSubContent": true,
+      "label": "Description",
+      "importance": "high",
+      "expanded": true,
+      "fields": [
+        {
+          "name": "desc",
+          "label": "Description",
+          "type": "text",
+          "tags": [
+            "p",
+            "br",
+            "strong",
+            "em"
+          ],
+          "optional": true,
+          "widget": "html",
+          "description": "Place your description text here."
+        },
+        {
+          "name": "notations",
+          "type": "list",
+          "label": "Notations",
+          "entity": "notation",
+          "min": 0,
+          "optional": true,
+          "description": "Notations in the description sections will be not interactive while solving task",
+          "field": {
+            "name": "question_notation",
+            "type": "group",
+            "label": "Notation",
+            "optional": true,
+            "fields": [
+              {
+                "name": "notationWidget",
+                "type": "text",
+                "description": "Add Notation",
+                "optional": true,
+                "widget": "notationWidget"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mediaList",
+          "type": "list",
+          "label": "Media",
+          "min": 0,
+          "optional": true,
+          "description": "Add any number of Videos, Pictures or Audio",
+          "field": {
+            "name": "media",
+            "type": "group",
+            "label": "Media",
+            "importance": "medium",
+            "fields": [
+              {
+                "name": "type",
+                "type": "library",
+                "label": "Type",
+                "importance": "medium",
+                "options": [
+                  "H5P.Image 1.1",
+                  "H5P.Video 1.6",
+                  "H5P.Audio 1.5"
+                ],
+                "optional": true,
+                "description": "Optional media to display under description."
+              },
+              {
+                "name": "disableImageZooming",
+                "type": "boolean",
+                "label": "Disable image zooming",
+                "importance": "low",
+                "default": false,
+                "optional": true,
+                "widget": "showWhen",
+                "showWhen": {
+                  "rules": [
+                    {
+                      "field": "type",
+                      "equals": "H5P.Image 1.1"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "selectTaskType",
+    "type": "select",
+    "label": "Task type",
+    "description": "Choose a task type to be displayed.",
+    "importance": "high",
+    "options": [
+      {
+        "value": "noInteract",
+        "label": "No Interactive Notation"
+      },
+      {
+        "value": "harmLabels",
+        "label": "Add Harmonylabels"
+      },
+      {
+        "value": "chords",
+        "label": "Write Chords"
+      },
+      {
+        "value": "score",
+        "label": "Write Score"
+      },
+      {
+        "value": "analysisText",
+        "label": "Write Analysis (Text)"
+      }
+    ],
+    "default": "noInteract"
+  },
+  {
+    "name": "answerScore",
+    "type": "group",
+    "label": "Student View",
+    "importance": "high",
+    "expanded": false,
+    "description": "This view will be seen while solving the task (May include some modifications according to task type",
+    "widget":"showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "harmLabels",
+            "chords",
+            "score",
+            "analysisText"
+          ]
+        }
+      ]
+    },
+    "fields": [
+      {
+        "name": "notationWidget",
+        "type": "text",
+        "optional": true,
+        "widget": "notationWidget"
+      },
+      {
+        "name": "annotationFieldGroup",
+        "type": "group",
+        "fields": [
+          {
+            "name": "annotationField",
+            "type": "text",
+            "optional": true,
+            "expanded": true
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "solutionScore",
+    "type": "group",
+    "label": "Model Solution",
+    "importance": "high",
+    "expanded": false,
+    "description": "Any entry here will be copied to the student view. This will be hidden while solving the task and will be compared with given answer",
+    "widget":"showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectTaskType",
+          "equals": [
+            "harmLabels",
+            "chords",
+            "score",
+            "analysisText"
+          ]
+        }
+      ]
+    },
+    "fields": [
+      {
+        "name": "notationWidget",
+        "type": "text",
+        "optional": true,
+        "widget": "notationWidget"
+      },
+      {
+        "name": "annotationFieldGroup",
+        "type": "group",
+        "fields": [
+          {
+            "name": "annotationField",
+            "type": "text",
+            "optional": true,
+            "expanded": true
+          }
+        ]
+      }
+    ]
+  },
+
+
+  {
+    "name": "checkAnswer",
+    "type": "text",
+    "label": "Text for \"Check\" button",
+    "importance": "low",
+    "default": "Check",
+    "common": true
+  }
+]

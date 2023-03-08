@@ -1,0 +1,220 @@
+@import '~verovioscoreeditor/src/styles/VerovioScoreEditor.css';
+
+
+textarea{
+  width: 100%
+}
+
+.vse-container{
+  position: relative !important;
+  height: 500px; /**!important;**/
+  overflow: scroll;
+  border:1px solid black !important;
+  resize: vertical;
+}
+
+.description-container{
+  padding-bottom: 2%;
+  padding-top: 2%
+}
+
+.description-container > .vse-container{
+  position: relative !important;
+  height: 0%;
+  overflow: scroll;
+  border:1px solid black !important;
+  resize: vertical;
+  padding-bottom: 20%;
+}
+
+.h5p-analysis .h5p-analysis-title {
+  width: auto;
+  overflow-y: auto;
+}
+
+.h5p-analysis .h5p-analysis-solution-container {
+  margin: 0 1em 0.5em 1em;
+  padding: 1em;
+  background: #FAFAFA;
+}
+
+.h5p-analysis .h5p-analysis-solution-title {
+  font-size: 1.125em;
+  margin-bottom: 0.5em;
+}
+
+.h5p-analysis .h5p-analysis-solution-introduction {
+  font-size: 1em;
+  line-height: 1.2;
+  margin-bottom: 1em;
+}
+
+.h5p-analysis .h5p-analysis-solution-sample {
+  background: #FFFFFF;
+  border: 1px solid #e0e0e0;
+  overflow: auto;
+  overflow-x: hidden;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.h5p-analysis .h5p-analysis-solution-sample-text {
+  padding: 0.5em 1em 0.5em 1em;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.h5p-analysis .h5p-analysis-input-field-textfield {
+  padding: 0.25em 0.4em;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid #C7C7C7;
+  border-top: 2px solid #C7C7C7;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+}
+
+.h5p-analysis .h5p-analysis-input-field-textfield:focus {
+  background-color: #fff;
+}
+
+/* Reduce bottom and top margin of children */
+.h5p-analysis .h5p-analysis-input-field-label > * {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+.h5p-analysis .h5p-analysis-input-field-message-wrapper {
+  overflow:auto;
+}
+
+.h5p-analysis .h5p-analysis-input-field-message-char {
+  font-size: 0.8em;
+  float: left;
+}
+
+.h5p-analysis .h5p-analysis-input-field-message-char-important {
+  font-weight: bold;
+}
+
+.h5p-analysis .h5p-analysis-input-field-message-save {
+  font-size: 0.8em;
+  float: right;
+}
+
+.h5p-analysis .h5p-analysis-input-field-message-save-animation {
+  animation-name: h5p-analysis-input-field-message-save-opacity;
+  animation-duration: 1s;
+}
+
+.h5p-analysis .h5p-analysis-feedback-empty {
+  color: #999999;
+}
+
+.h5p-analysis .h5p-question-explanation-container {
+  margin: 0 1em;
+}
+
+.analysis-score-input{
+  display: none
+}
+
+/* .fullscreenBtn{
+  position: absolute; 
+  top: 0; 
+  right: 0; 
+  bottom: 0; 
+  left: 0;  
+}
+
+.fullscreenBtn{
+  position: absolute;
+  z-index: 100;
+  top: 0;
+  right: 0
+}
+
+.fullscreenBtn{
+  position: absolute;
+  background: transparent;
+  border: none !important;
+  font-size:0;
+} */
+
+.fullscreen{
+  width: 100%;
+  height: 100% !important;
+}
+
+.h5p-iframe{
+  height: 1000px !important;
+  position: absolute;
+  border: none;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.h5p-iframe > body{
+  height: 100% !important;
+}
+
+/* .h5p-content, .h5p-container, .h5p-question-content > div, .vse-container{
+  height: 100% !important;
+} */
+
+.h5p-question-content{
+  height: 90% !important;
+}
+
+.h5p-question-image{
+  margin: 1em 1em 0 1em !important;
+}
+
+.h5p-question-video{
+  line-height: normal;
+  margin: 1em 0 !important;
+}
+
+.h5p-question-video > div:first-child{
+  padding: 2% 0 2% 0;
+}
+
+.zoomBtnContainer{
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  display: flex;
+  height: 25px;
+  width: 50px;
+  z-index: 100;
+}
+
+.h5p-zoomBtn{
+  height: 100%;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.h5p-zoomBtn.zoomIn{
+  background-image: url(../assets/zoomin.svg);
+}
+
+.h5p-zoomBtn.zoomOut{
+  background-image: url(../assets/zoomout.svg);
+}
+
+
+#fileSelectGroup{
+  position: unset !important;
+}
+
+.mistake *, .mistake{
+  fill:crimson;
+  fill-opacity: 1;
+  color: crimson;
+}

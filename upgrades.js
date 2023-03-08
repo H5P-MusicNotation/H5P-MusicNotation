@@ -1,6 +1,6 @@
 var H5PUpgrades = H5PUpgrades || {};
 
-H5PUpgrades['H5P.EssayScore4LMS'] = (function () {
+H5PUpgrades['H5P.AnalyseScore4LMS'] = (function () {
   return {
     1: {
       /**
