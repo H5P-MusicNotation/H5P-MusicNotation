@@ -213,8 +213,14 @@ textarea{
   position: unset !important;
 }
 
-.mistake *, .mistake{
+.wrong *, .wrong{
   fill:crimson;
   fill-opacity: 1;
   color: crimson;
+}
+
+.correct *, .correct{
+  fill:green;
+  fill-opacity: 1;
+  color: green;
 }

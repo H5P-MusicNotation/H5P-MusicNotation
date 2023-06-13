@@ -5,6 +5,9 @@ import {
 }
   from "./globals";
 import { uuidv4 } from 'verovioscoreeditor/src/scripts/js/utils/random';
+import 'dotenv/config';
+
+const DANDELION_API_KEY = api.env.API_KEY
 
 
 // CSS Classes
@@ -63,7 +66,20 @@ export default class NoteInputField {
 
     //notation
     this.notationData = this.params.notationScore
+    this.annotData = this.params.annotationField
     this.vseInstance = new VerovioScoreEditor(this.scoreContainer, { data: this.notationData }, this.meiCallback.bind(this));
+
+    //Copy annotationCanvas from stored svg and init it with annnotation
+    if(this.annotData != undefined){
+      this.scoreContainer.addEventListener("vseInit", function(){
+        var svgAnnotCanvas = new DOMParser().parseFromString(that.annotData, "text/html").querySelector("#annotationCanvas")
+        svgAnnotCanvas.classList.replace("front", "back")
+        svgAnnotCanvas.setAttribute("viewBox", that.vseInstance.container.querySelector("#interactionOverlay").getAttribute("viewBox"))
+        //that.vseInstance.getCore().getInsertModeHandler().getAnnotations().updateCanvas()
+        that.vseInstance.getCore().getContainer().querySelector("#annotationCanvas")?.replaceWith(svgAnnotCanvas)
+        that.vseInstance.getCore().getInsertModeHandler().getAnnotations().updateAnnotationList(svgAnnotCanvas)
+      })
+    }
     
     this.content = document.createElement('div');
     this.content.appendChild(this.inputField);
@@ -96,7 +112,7 @@ export default class NoteInputField {
 
   setListeners() {
     var that = this
-    this.scoreContainer.addEventListener("vseInit", this.initialLoad.bind(this))
+    //this.scoreContainer.addEventListener("vseInit", this.initialLoad.bind(this))
     this.scoreContainer.closest(".h5p-question-content")?.querySelectorAll("div > div").forEach(d => d.addEventListener("resize", this.adjustFrameFunction))
   }
 
@@ -105,18 +121,18 @@ export default class NoteInputField {
     this.usedIds.push(this.scoreContainer.id)
     this.scoreContainer.dispatchEvent(new Event("containerAttached"));
     this.rootSVG = this.scoreContainer.querySelector('#rootSVG');
-    var oldAnnotationCanvas = this.scoreContainer.querySelector("#annotationCanvas")
-    var newAnnotationCanvas = new DOMParser().parseFromString(this.params.notationScore.annotationFieldGroup, "text/html").body.childNodes[0]
-    newAnnotationCanvas = new DOMParser().parseFromString(newAnnotationCanvas.nodeValue, "image/svg+xml").children[0]
+    // var oldAnnotationCanvas = this.scoreContainer.querySelector("#annotationCanvas")
+    // var newAnnotationCanvas = new DOMParser().parseFromString(this.params.notationScore.annotationFieldGroup, "text/html").body.childNodes[0]
+    // newAnnotationCanvas = new DOMParser().parseFromString(newAnnotationCanvas.nodeValue, "image/svg+xml").children[0]
 
-    if (oldAnnotationCanvas === null) {
-      this.scoreContainer.querySelector("#interactionOverlay").append(newAnnotationCanvas)
-    } else {
-      oldAnnotationCanvas.replaceWith(newAnnotationCanvas)
-    }
+    // if (oldAnnotationCanvas === null) {
+    //   this.scoreContainer.querySelector("#interactionOverlay").append(newAnnotationCanvas)
+    // } else {
+    //   oldAnnotationCanvas.replaceWith(newAnnotationCanvas)
+    // }
 
-    newAnnotationCanvas.setAttribute("viewBox", this.scoreContainer.querySelector("#interactionOverlay").getAttribute("viewBox"))
-    this.vseInstance.getCore().getInsertModeHandler().getAnnotations().setAnnotationCanvas(newAnnotationCanvas)
+    // newAnnotationCanvas.setAttribute("viewBox", this.scoreContainer.querySelector("#interactionOverlay").getAttribute("viewBox"))
+    // this.vseInstance.getCore().getInsertModeHandler().getAnnotations().setAnnotationCanvas(newAnnotationCanvas)
   }
 
   /**
@@ -249,9 +265,11 @@ export default class NoteInputField {
 
   meiCallback() {
     var that = this
-    this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2MEI().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".mistake").forEach(el => {
-      el.classList.remove("mistake")
-      that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("mistake")
+    this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2MEI().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
+      el.classList.remove("wrong")
+      that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("wrong")
+      el.classList.remove("correct")
+      that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("correct")
     })
   }
 

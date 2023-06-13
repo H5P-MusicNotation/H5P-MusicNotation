@@ -1,4 +1,5 @@
 var path = require('path');
+var webpack = require("webpack")
 var nodeEnv = process.env.NODE_ENV || 'development';
 var isDev = (nodeEnv !== 'production');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
@@ -20,25 +21,25 @@ var config = {
         loader: 'babel-loader'
       },
       {
-      //   test: /\.(scss|css)$/,
-      //   use: ['style-loader', 'css-loader', 'sass-loader'],
-      //   include: path.join(__dirname, 'src/styles')
-      // //   use: [{
-      // //     loader: 'style-loader', // inject CSS to page
-      // //   }, 
-      // //   {
-      // //     loader: 'css-loader', // translates CSS into CommonJS modules
-      // //   },  
-      // //   {
-      // //     loader: 'sass-loader' // compiles Sass to CSS
-      // //   }]
-      // },
-      
+        //   test: /\.(scss|css)$/,
+        //   use: ['style-loader', 'css-loader', 'sass-loader'],
+        //   include: path.join(__dirname, 'src/styles')
+        // //   use: [{
+        // //     loader: 'style-loader', // inject CSS to page
+        // //   }, 
+        // //   {
+        // //     loader: 'css-loader', // translates CSS into CommonJS modules
+        // //   },  
+        // //   {
+        // //     loader: 'sass-loader' // compiles Sass to CSS
+        // //   }]
+        // },
+
         test: /\.css$/,
         use: [
           MiniCssExtractPlugin.loader,
           "css-loader",
-  
+
         ]
       },
       {
@@ -54,13 +55,18 @@ var config = {
   ,
   plugins: [
     new MiniCssExtractPlugin({
-    filename: "analysis.css"
-      }), 
-    new NodePolyfillPlugin()
-    ]
+      filename: "analysis.css"
+    }),
+    new NodePolyfillPlugin(),
+    new webpack.DefinePlugin({
+      "api.env": {
+        API_KEY: JSON.stringify(process.env.API_KEY),
+      }
+    })
+  ]
 };
 
-if(isDev) {
+if (isDev) {
   config.devtool = 'inline-source-map';
 }
 

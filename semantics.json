@@ -91,6 +91,11 @@
                 "name": "meiStorage",
                 "type": "text",
                 "optional": true
+              }, 
+              {
+                "name": "svgStorage",
+                "type": "text",
+                "optional": "true"
               }
             ]
           }
@@ -167,9 +172,10 @@
         "value": "score",
         "label": "Write Score"
       },
-      {
-        "value": "analysisText",
-        "label": "Write Analysis (Text)"
+      { "_comment": {
+          "value": "analysisText",
+          "label": "Write Analysis (Text)"
+        }
       }
     ],
     "default": "noInteract"
@@ -215,7 +221,7 @@
     "label": "Description",
     "optional": true,
     "type": "text",
-    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chords will be not visible but replaced by rests.",
+    "description": "Write Chords and their chord annotations. While solving the task the chords will be not visible but replaced by rests.",
     "widget": "showWhen",
     "showWhen": {
       "rules": [
@@ -229,11 +235,11 @@
     }
   },
   {
-    "name": "chrodWriteDesc",
+    "name": "scoreWriteDesc",
     "label": "Description",
     "optional": true,
     "type": "text",
-    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chord annotations will be shown as '?'.",
+    "description": "A free score should be entered. There is no comparison with a stored solution.\n This praragraph is suitable e.g. for predefining segments or interactive examples. ",
     "widget": "showWhen",
     "showWhen": {
       "rules": [
@@ -247,11 +253,11 @@
     }
   },
   {
-    "name": "scoreWriteDesc",
+    "name": "analysisWriteDesc",
     "label": "Description",
     "optional": true,
     "type": "text",
-    "description": "Write an Analysis about the given piece.",
+    "description": "Write an analysis about the given piece. The solution has to be be provided as list of key words.",
     "widget": "showWhen",
     "showWhen": {
       "rules": [

@@ -65,8 +65,10 @@ const AnalysisScore4LMS = (function () {
     //this.params.placeholderText = this.htmlDecode(this.params.placeholderText || '');
 
     // Get previous state from content data
-    if (contentData != undefined && contentData.previousState != undefined) {
-      this.previousState = contentData.previousState;
+    if (contentData != undefined && contentData?.previousState != undefined){
+      if(Object.keys(contentData.previousState).length > 0) {
+        this.previousState = contentData.previousState;
+      }
     }
 
     this.isAnswered = this.previousState && this.previousState.inputField && this.previousState.inputField !== '' || false;
@@ -81,11 +83,20 @@ const AnalysisScore4LMS = (function () {
   AnalysisScore4LMS.prototype.constructor = AnalysisScore4LMS;
 
   function sanitizeXMLString(xml) {
-    return xml.replace(/&amp;/g, "&").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&quot;/g, "\"");
+    return xml?.replace(/&amp;/g, "&").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&quot;/g, "\"");
+  }
+
+  function reformatXMLString(xml) {
+    return xml?.replace("&", "&amp;")
+      .replace(">", "&gt;")
+      .replace("<", "&lt;")
+      .replace("\"", "&quot;")
+      .replace(/\n/g, "") // delete all unnecessary newline
+      .replace(/\s{2,}/g, ""); // delete all unnecessary whitespaces
   }
 
   /**
-   * Zoom SVG since it is not interactive after loading from task editor
+   * Zoom SVG since it is not interactive anymore after loading from task editor
    * @param {*} e 
    */
   AnalysisScore4LMS.prototype.zoomSvg = function (e) {
@@ -120,11 +131,13 @@ const AnalysisScore4LMS = (function () {
 
     // Create InputFields
 
-    var viewScore = this.taskType === "noInteract" ? undefined : this.params.as4lControllerGroup?.dataStorageGroup?.viewScore
+    var viewScore = this.taskType === "noInteract" ? undefined : reformatXMLString(this.previousState?.inputField) || this.params.as4lControllerGroup?.dataStorageGroup?.viewScore
+    var annotField = sanitizeXMLString(this.params.as4lControllerGroup?.dataStorageGroup?.annotationField)
     if (viewScore != undefined) {
       this.noteInputField = new NoteInputField({
         notationScore: viewScore,
-        previousState: this.previousState
+        previousState: this.previousState,
+        annotationField: annotField
         //statusBar: statusBar
       }, {
         onInteracted: (function (params) {
@@ -262,7 +275,9 @@ const AnalysisScore4LMS = (function () {
 
         newDiv.prepend(svgout)
       })
-      newDiv.prepend(parser.parseFromString(d.paragraphText, "text/html").body.firstChild)
+      if(d.paragraphText.length > 0){
+        newDiv.prepend(parser.parseFromString(d.paragraphText, "text/html").body.firstChild)
+      }
       this.content.prepend(newDiv)
     })
 
@@ -647,12 +662,14 @@ const AnalysisScore4LMS = (function () {
     }, params);
     this.computeResults();
 
-    if (this.results != undefined) {
+    if (this.wrong != undefined && this.correct != undefined) {
 
-      console.log("RESULTS", this.results)
-      this.noteInputField?.getScoreContainer().querySelectorAll(".mistake")?.forEach(m => m.classList.remove("mistake"))
-      this.results.forEach(r => {
-        this.noteInputField?.getScoreContainer().querySelector("#" + r)?.classList.add("mistake")
+      this.noteInputField?.getScoreContainer().querySelectorAll(".wrong")?.forEach(m => m.classList.remove("wrong"))
+      this.wrong.forEach(w => {
+        this.noteInputField?.getScoreContainer().querySelector("#" + w)?.classList.add("wrong")
+      })
+      this.correct.forEach(c => {
+        this.noteInputField?.getScoreContainer().querySelector("#" + c)?.classList.add("correct")
       })
 
       console.log("SCORE", this.getScore())
@@ -772,24 +789,41 @@ const AnalysisScore4LMS = (function () {
 
   /**
    * Evaluate series of harmony setting activities.
+   * THe xAPI Evaluation is modelled as interactionType "matching"
    */
   AnalysisScore4LMS.prototype.evaluateHarmLabels = function () {
     var modelHarms = this.makeDoc(this.modelSolution).querySelectorAll("harm")
     var answerHarms = this.noteInputField?.getMei(true).querySelectorAll("harm")
 
-    this.results = new Array()
-    var id = 0
+    this.source = []
+    this.dummySource = [] //dummyTource is needed to display given wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
+    this.response = ""
+    this.correctResponsePattern = ""
+    
+    this.wrong = new Array()
+    this.correct = new Array()
+    var idxCounter = 0
     this.score = 0
     modelHarms.forEach((mh, i) => {
+      this.source.push(mh.textContent)
       var hLabels = mh.textContent.replace(" ", "").split(",")
+      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
       var hasNoMistake = hLabels.some(hl => hl === answerHarms[i].textContent.replace(" ", ""))
       if (hasNoMistake) {
+        this.response = this.response + "[,]" + i + "[.]" + i
+        this.correct.push(answerHarms[i].id)
         this.score += 1
       } else {
-        this.results.push(answerHarms[i].id)
-        id += 1
+        this.response = this.response + "[,]" + i + "[.]" + (modelHarms.length + idxCounter).toString()
+        this.dummySource.push(answerHarms[i].textContent)
+        this.wrong.push(answerHarms[i].id)
+        idxCounter += 1
       }
     })
+    
+    this.target = this.source
+    this.response = this.response.substring(3) // delete trailing [,]
+    this.correctResponsePattern = this.correctResponsePattern.substring(3)
     this.score = this.score / modelHarms.length * this.getMaxScore()
   }
 
@@ -858,42 +892,83 @@ const AnalysisScore4LMS = (function () {
       return { noteMap: noteMap, noteIdMap: noteIdMap, pitchSet: [...new Set(set)] }
     }
 
-    this.results = new Array()
+    function joinResponse(array){
+      array = array.map(rt => {
+        let t = rt.replace("n", "")
+        t = t.replace("s", "#")
+        if(rt[1] === "f"){
+          t = t.substring(0,1) + "b"
+        }
+        return t
+      })
+      return array.sort().join(",")
+    }
+
+    this.source = []
+    this.target = []
+    this.dummySource = []
+    this.response = ""
+    this.correctResponsePattern = ""
+
+    this.wrong = new Array()
+    this.correct = new Array()
     this.score = 0
+    var idxCounter = 0
     modelHarms.forEach((mh, i) => {
       var modelNotes = getNoteMaps(mh, modelDoc)
-      var modelNoteSet = modelNotes.pitchSet
+      var modelNoteSet = modelNotes.pitchSet.sort()
+      this.target.push(mh.textContent)
+      this.source.push(joinResponse(modelNoteSet)) 
+      this.correctResponsePattern += "[,]" + i + "[.]" + i
       var ah = answerHarms[i]
       var answerNotes = getNoteMaps(ah, answerDoc)
       var answerNoteMap = answerNotes.noteMap
       var answerNoteIdMap = answerNotes.noteIdMap
 
+      var responseTemp = []
+
       var idsTemp = new Array()
       var pnameTemp = new Array()
       for (const [key, value] of answerNoteMap.entries()) {
-        if (modelNoteSet.some(pname => pname === value)) { // in this case the pitchclass is present and is therefore right
+        if (modelNoteSet.some(pname => pname === value)) { // in this case the pitchclass is present and is therefore correct
           pnameTemp.push(value) // track pnames that where already found. multiple notes won't be found in set, so this can be used to filter for found ids afterwards
           modelNoteSet = modelNoteSet.filter(x => x !== value)
+          responseTemp.push(value)
           idsTemp.push(answerNoteIdMap.get(key))
+          this.correct.push(answerNoteIdMap.get(key))
           answerNoteMap.delete(key)
         } else { // otherwise
           if (!pnameTemp.some(pname => pname === value)) {
-            this.results.push(answerNoteIdMap.get(key))
+            this.wrong.push(answerNoteIdMap.get(key))
+            responseTemp.push(value)
           } else {
+            this.correct.push(answerNoteIdMap.get(key))
+            responseTemp.push(value)
             idsTemp.push(answerNoteIdMap.get(key))
           }
         }
       }
       if (modelNoteSet.length > 0) { // if modelNoteSet has still entries, there must be some pitch classes missing in the answer. Therefore the whole chord is cconsidered to be wrong
-        this.results.concat(idsTemp)
+        this.wrong.concat(idsTemp)
+      }
+      
+
+      if(answerNoteMap.size > 0 || modelNoteSet.length > 0){
+        this.dummySource.push(joinResponse(responseTemp))
+        this.response += "[,]" + i + "[.]" + (modelHarms.length + idxCounter).toString()
+        idxCounter += 1
+      }else{
+        this.response += "[,]" + i + "[.]" + i
       }
 
-      //var hasNoMistake = answerNoteMap.size === 0 && modelNoteSet.length === 0
-      //if(hasNoMistake) this.score += 1
       this.score += answerNoteMap.size === 0 && modelNoteSet.length === 0
     })
+
+
+    this.response = this.response.substring(3) // delete trailing [,]
+    this.correctResponsePattern = this.correctResponsePattern.substring(3)
     this.score = this.score / modelHarms.length * this.getMaxScore()
-    this.results.forEach(r => console.log(document.getElementById(r)))
+
   }
 
   /**
@@ -1102,18 +1177,94 @@ const AnalysisScore4LMS = (function () {
    * return {Object} XAPI definition.
    */
   AnalysisScore4LMS.prototype.getxAPIDefinition = function () {
+    var interactionType = ""
+    switch (this.taskType) {
+      case "noInteraction":
+        interactionType = "long-fill-in"
+        break;
+      case "harmLabels":
+        interactionType = "matching"
+        break;
+      case "chords":
+        interactionType = "matching"
+        break;
+      case "score":
+        interactionType = "long-fill-in"
+        break;
+      case "analysisText":
+        interactionType = "long-fill-in"
+        break;
+    }
+
     const definition = {};
-    definition.name = {};
-    definition.name[this.languageTag] = this.getTitle();
-    // Fallback for h5p-php-reporting, expects en-US
-    definition.name['en-US'] = definition.name[this.languageTag];
-    // The H5P reporting module expects the "blanks" to be added to the description
-    definition.description = {};
-    definition.description[this.languageTag] = this.params.taskDescription + AnalysisScore4LMS.FILL_IN_PLACEHOLDER;
-    // Fallback for h5p-php-reporting, expects en-US
-    definition.description['en-US'] = definition.description[this.languageTag];
-    definition.type = 'http://id.tincanapi.com/activitytype/analysis';
-    definition.interactionType = 'long-fill-in';
+      definition.name = {};
+      definition.name[this.languageTag] = this.getTitle();
+      // Fallback for h5p-php-reporting, expects en-US
+      definition.name['en-US'] = definition.name[this.languageTag];
+      // The H5P reporting module expects the "blanks" to be added to the description
+      definition.description = {}
+      definition.description[this.languageTag] = this.params.taskDescription + AnalysisScore4LMS.FILL_IN_PLACEHOLDER;
+      // Fallback for h5p-php-reporting, expects en-US
+      definition.description['en-US'] = definition.description[this.languageTag];
+      definition.type = "http://adlnet.gov/expapi/activities/cmi.interaction"
+      definition.interactionType = interactionType;
+    
+    switch (interactionType){
+      case "long-fill-in":
+        break;
+      case "matching":
+
+        // var tempSource = this.source
+        // var tempTarget = this.target
+        // this.source = tempTarget
+        // this.target = tempSource
+
+        definition.correctResponsesPattern = [this.correctResponsePattern]
+        definition.source = []
+        definition.target = []
+
+        //compute source and target separately since both can have different descriptions
+        // WARNING: H5P only accepts numercial ids in xAPI Statement
+        this.source.forEach((s, i) => {
+          let x = {
+            "id": i,
+            "description":{
+              "en-US": s + "\n"
+            }
+          }
+          definition.source[i] = x 
+        })
+        this.target.forEach((t, i) => {
+          let x = {
+            "id": i,
+            "description":{
+              "en-US": t + "\n"
+            }
+          }
+          definition.target[i] = x
+        })
+        //dummySource is needed to display wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
+        this.dummySource.forEach((d, i) => {
+          let x = {
+            "id": definition.source.length,
+            "description":{
+              "en-US": d + "\n"
+            }
+          }
+          definition.source[definition.source.length] = x
+        })
+      
+      break;
+
+      default:
+      throw new Error(interactionType, " is not a valid interactionType")
+    }
+
+
+
+
+
+
     /*
      * The official xAPI documentation discourages to use a correct response
      * pattern it if the criteria for a question are complex and correct
@@ -1121,6 +1272,7 @@ const AnalysisScore4LMS = (function () {
      */
     console.log('getxAPIDefinition');
     console.log(definition);
+
     return definition;
   };
 
@@ -1131,8 +1283,9 @@ const AnalysisScore4LMS = (function () {
   AnalysisScore4LMS.prototype.getXAPIAnswerEvent = function () {
     const xAPIEvent = this.createAnalysisXAPIEvent('answered');
 
-    xAPIEvent.setScoredResult(this.getScore(), this.getScore(), this, true, this.isPassed());
-    xAPIEvent.data.statement.result.response = this.noteInputField?.getText();
+    xAPIEvent.setScoredResult(this.getScore(), this.getMaxScore(), this, true, this.isPassed());
+
+    xAPIEvent.data.statement.result.response = this.response//this.noteInputField?.getText();
 
     console.log('getXAPIAnswerEvent');
     console.log(xAPIEvent);
@@ -1390,9 +1543,9 @@ const AnalysisScore4LMS = (function () {
    * @return {Object} Current state.
    */
   AnalysisScore4LMS.prototype.getCurrentState = function () {
-    if (!this.noteInputField) {
-      return; // may not be attached to the DOM yet
-    }
+    // if (!this.noteInputField) {
+    //   return; // may not be attached to the DOM yet
+    // }
 
     // this.noteInputField?.updateMessageSaved(this.params.messageSave);
 
