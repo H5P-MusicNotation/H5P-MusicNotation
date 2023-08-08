@@ -117,9 +117,10 @@ const AnalysisScore4LMS = (function () {
 
     this.deltaTempMap.set(vseContainer.id, deltaTemp)
 
-    vseContainer.querySelectorAll("svg").forEach(svg => {
-      svg.setAttribute("transform", "scale(" + deltaTemp.toString() + ")")
-      svg.style.transform = "scale(" + deltaTemp.toString() + ")"
+    //vseContainer.style.width = (100 * deltaTemp).toString() + "%"
+
+    vseContainer.querySelectorAll("svg, g").forEach(svg => {
+      svg.style.width = (100 * deltaTemp).toString() + "%"
     })
   }
 

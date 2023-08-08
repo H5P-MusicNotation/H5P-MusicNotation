@@ -4,6 +4,7 @@ var nodeEnv = process.env.NODE_ENV || 'development';
 var isDev = (nodeEnv !== 'production');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
+const FontminPlugin = require('fontmin-webpack')
 
 var config = {
   //mode: "development",
@@ -41,22 +42,17 @@ var config = {
           "css-loader",
 
         ]
-      },
-      {
-        test: /\.(eot|svg|ttf|woff|woff2)$/,
-        include: path.join(__dirname, 'src/fonts'),
-        loader: 'file-loader',
-        options: {
-          name: 'fonts/[name].[ext]'
-        }
       }
     ]
-  }
-  ,
+  },
   plugins: [
     new MiniCssExtractPlugin({
       filename: "analysis.css"
     }),
+    // new FontminPlugin({
+    //   autodetect: true,
+    //   allowedFilesRegex: /\.(eot|svg|woff|otf)$/
+    // }),
     new NodePolyfillPlugin(),
     new webpack.DefinePlugin({
       "api.env": {

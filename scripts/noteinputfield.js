@@ -265,7 +265,7 @@ export default class NoteInputField {
 
   meiCallback() {
     var that = this
-    this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2MEI().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
+    this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2SVG().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
       el.classList.remove("wrong")
       that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("wrong")
       el.classList.remove("correct")

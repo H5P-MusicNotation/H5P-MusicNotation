@@ -14,9 +14,11 @@ src
 karma.conf.js
 webpack.config.js
 webpack.dev.config.js
+webpack.config.post.js
 README.md
 CONTRIBUTING.md
 package.json
 worknotes
 package-lock.json
 LICENSE
+dist_pre
