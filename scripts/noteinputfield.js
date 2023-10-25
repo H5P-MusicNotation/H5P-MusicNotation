@@ -1,13 +1,10 @@
 
-import VerovioScoreEditor from 'verovioscoreeditor';
+import VerovioScoreEditor from 'vibe-editor';
 import {
   jQuery as $, JoubelUI as UI, Question
 }
   from "./globals";
-import { uuidv4 } from 'verovioscoreeditor/src/scripts/js/utils/random';
-import 'dotenv/config';
-
-const DANDELION_API_KEY = api.env.API_KEY
+import { uuidv4 } from 'vibe-editor/src/scripts/js/utils/random'
 
 
 // CSS Classes
@@ -47,8 +44,13 @@ export default class NoteInputField {
 
 
     this.vseInstances = [];
-    if(this.params.container != undefined){
-      this.scoreContainer = this.params.container
+    if(this.params.svgContainer){
+      const parser = new DOMParser()
+      this.scoreContainer = parser.parseFromString(this.params.svgContainer, "text/html")
+      if(!this.scoreContainer.classList){
+        this.scoreContainer = parser.parseFromString(this.scoreContainer.body.textContent, "text/html")
+      }
+      this.scoreContainer = this.scoreContainer.querySelector(".vse-container")
     }else{
       this.scoreContainer = document.createElement('div');
       this.scoreContainer.setAttribute('id', 'vseDesc-' + uuidv4());
@@ -66,20 +68,10 @@ export default class NoteInputField {
 
     //notation
     this.notationData = this.params.notationScore
-    this.annotData = this.params.annotationField
-    this.vseInstance = new VerovioScoreEditor(this.scoreContainer, { data: this.notationData }, this.meiCallback.bind(this));
+    //this.annotData = this.params.annotationField
 
-    //Copy annotationCanvas from stored svg and init it with annnotation
-    if(this.annotData != undefined){
-      this.scoreContainer.addEventListener("vseInit", function(){
-        var svgAnnotCanvas = new DOMParser().parseFromString(that.annotData, "text/html").querySelector("#annotationCanvas")
-        svgAnnotCanvas.classList.replace("front", "back")
-        svgAnnotCanvas.setAttribute("viewBox", that.vseInstance.container.querySelector("#interactionOverlay").getAttribute("viewBox"))
-        //that.vseInstance.getCore().getInsertModeHandler().getAnnotations().updateCanvas()
-        that.vseInstance.getCore().getContainer().querySelector("#annotationCanvas")?.replaceWith(svgAnnotCanvas)
-        that.vseInstance.getCore().getInsertModeHandler().getAnnotations().updateAnnotationList(svgAnnotCanvas)
-      })
-    }
+    this.vseInstance = new VerovioScoreEditor(this.scoreContainer, { data: this.notationData }, this.meiCallback.bind(this));
+    this.scoreContainer.addEventListener("loadingEnd", params.afterLoadCallback)
     
     this.content = document.createElement('div');
     this.content.appendChild(this.inputField);
@@ -98,10 +90,6 @@ export default class NoteInputField {
     })
     fullsizeBtn.addEventListener("click", this.setFullscreen.bind(this))
     this.scoreContainer.addEventListener("fullscreenchange", this.setFullscreenElements.bind(this))
-
-    // Container
-    this.container = document.createElement('div');
-    this.container.classList.add(MAIN_CONTAINER);
 
     var elementSVG = document.createElement('img');
     this.content.appendChild(elementSVG);
@@ -152,7 +140,10 @@ export default class NoteInputField {
             that.vseInstances.forEach(vi => {
               if (vi.container.id === vseContainer.id) {
                 var core = vi.getCore()
-                core.loadData("", core.getCurrentMEI(false), false, "svg_output")
+                core.loadData(core.getCurrentMEI(false), false).then(() => {
+                  that.afterLoadCallback()
+                  //that.adjustFrameResponsive()
+                })
               }
             })
           }
@@ -185,6 +176,7 @@ export default class NoteInputField {
       adjustPageHeight: 1
     })
     core.loadData("", core.getCurrentMEI(false), false, "svg_output").then(() => {
+      this.afterLoadCallback()
       this.adjustFrameResponsive(this.scoreContainer)
     })
 
@@ -195,15 +187,14 @@ export default class NoteInputField {
      */
   adjustFrameResponsive(vseContainer) {
 
-    var defScale = vseContainer.querySelector("#rootSVG .definition-scale")
-    var dsHeight
-    var dsWidth
-    if (defScale !== null) {
-      dsHeight = defScale.getBoundingClientRect().height / 11
-      dsHeight = dsHeight.toString() + "rem"
-      // console.log(dsHeight);
+    var containerSVG = vseContainer.querySelector("#svgContainer")
+    var containerHeight
+    if (containerSVG !== null) {
+      var vb = containerSVG.querySelector("#interactionOverlay").getAttribute("viewBox")?.split(" ").map(parseFloat)
+      containerHeight = (vb[3] * 1.25).toString() + "px"
     }
-    vseContainer.style.height = dsHeight || "20rem"
+    vseContainer.style.height = containerHeight || "20rem"
+    vseContainer.style.width = "100%"
     //console.log(vseContainer.style.height);
 
     var h5pContainer = document.querySelector(".h5p-container")
@@ -265,7 +256,8 @@ export default class NoteInputField {
 
   meiCallback() {
     var that = this
-    this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2SVG().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
+    //this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2SVG().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
+      this.scoreContainer.querySelectorAll(".wrong, .correct").forEach(el => {
       el.classList.remove("wrong")
       that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("wrong")
       el.classList.remove("correct")
@@ -278,7 +270,11 @@ export default class NoteInputField {
    * @returns 
    */
   getMei(asDocument = false) {
-    return this.vseInstance.getCore().getCurrentMEI(asDocument)
+    return this.vseInstance.getCore()?.getCurrentMEI(asDocument)
+  }
+
+  getAnnotationSVG(){
+    return this.scoreContainer.querySelector("#annotationCanvas")
   }
 
   /**
@@ -318,12 +314,17 @@ export default class NoteInputField {
 
   disableInteraction() {
     this.vseInstance.getCore()?.setHideUI(true)
-    this.vseInstance.getCore()?.reloadDataFunction()
+    this.vseInstance.getCore()?.reloadData()
+    try{
+      this.vseInstance.getCore().windowHandler?.removeListeners()
+    }catch(error){
+      //yeah just go on
+    }
   }
 
   enableInteraction() {
     this.vseInstance.getCore()?.setHideUI(false)
-    this.vseInstance.getCore()?.reloadDataFunction()
+    this.vseInstance.getCore()?.reloadData()
   }
 
   destroyVSEInstance(){
@@ -447,5 +448,9 @@ export default class NoteInputField {
       this.statusChars.classList.remove(CHAR_MESSAGE_IMPORTANT);
     }
   };
+
+  setAfterLoadCallback(callback){
+    this.afterLoadCallback = callback
+  }
 
 }

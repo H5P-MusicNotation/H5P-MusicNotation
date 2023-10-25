@@ -3,10 +3,10 @@
   "description": "Create Music Analysis Tasks in H5P",
   "majorVersion": 1,
   "minorVersion": 0,
-  "patchVersion": 41,
+  "patchVersion": 46,
   "runnable": 1,
   "embedTypes": [
-    "iframe"
+    "div"
   ],
   "author": "Zemfi Dreamteam",
   "license": "MIT",

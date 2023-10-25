@@ -1,15 +1,11 @@
-import VerovioScoreEditor from "verovioscoreeditor";
 import {
-  jQuery as $, JoubelUI as UI, Question
+  jQuery as $, JoubelUI as UI, Question, setUserData, getUserData
 }
   from "./globals";
 import NoteInputField from "./noteinputfield";
-import TextInputField from "./textinputfield";
-import { uuidv4 } from "verovioscoreeditor/src/scripts/js/utils/random";
+import { uuidv4 } from "vibe-editor/src/scripts/js/utils/random";
+import * as sw from 'stopword';
 
-/**
- * TODO: This content type needs refactoring.
- */
 const AnalysisScore4LMS = (function () {
 
   /**
@@ -36,7 +32,12 @@ const AnalysisScore4LMS = (function () {
       return;
     }
 
-    console.log("CONFIG", config)
+    console.log("CONFIG", config, contentData)
+
+    // get User Data, since in some instances contentData is not loading the state after saving it actively
+    var userData
+    function setUD(_, data) { userData = data }
+    getUserData(contentId, 'state', setUD)
 
     // Inheritance
     Question.call(this, 'analysis');
@@ -46,35 +47,58 @@ const AnalysisScore4LMS = (function () {
       {
         media: {},
         taskDescription: '',
-        checkAnswer: 'Submit',
-        behaviour: { enableRetry: true },
+        behaviour: { enableRetry: false },
       },
       config);
     this.contentId = contentId;
-    this.extras = contentData;
+    this.extras = AnalysisScore4LMS.extend(contentData);
+    if (userData) {
+      this.extras = AnalysisScore4LMS.extend(userData);
+    }
     const defaultLanguage = (this.extras && this.extras.metadata) ? this.extras.metadata.defaultLanguage || 'en' : 'en';
     this.languageTag = AnalysisScore4LMS.formatLanguageCode(defaultLanguage);
 
-    this.score = 0;
-    this.internalShowSolutionsCall = false;
+    this.points = 0;
 
-    this.modelSolution = config.interactiveNotation // is string
-    this.taskType = config.selectTaskType // will be important how the different evaluations will be implemeneted
+    this.solutionMEI = config.as4lControllerGroup.dataStorageGroup.solutionMEI  // is string
+    this.studentMEI = config.as4lControllerGroup.dataStorageGroup.studentMEI //MEI for the initalization of VSE  //is string
+    this.studentSVG = config.as4lControllerGroup.dataStorageGroup.studentSVG //SVG to be shown, when Tasks loads
+    //this.annotationView = config.as4lControllerGroup.dataStorageGroup.annotationViewField
 
-    // Sanitize HTML encoding
-    //this.params.placeholderText = this.htmlDecode(this.params.placeholderText || '');
+    this.checkPitch = config.taskConfig.checkPitch || false
+    this.checkDuration = config.taskConfig.checkDuration || false
+    this.checkOctavePosition = this.checkPitch ? config.taskConfig.checkOctavePosition || false : false
+    this.checkHarmLabels = config.taskConfig.checkHarmLabels || false
+    this.checkTextboxes = config.taskConfig.checkTextboxes || false
+    this.noChecks = !this.checkOctave && !this.checkDuration && !this.checkHarmLabels && !this.checkPitch && !this.checkTextboxes
+
+    this.checkShowSolutions = config.taskConfig.showSolution || false
+    this.checkRetry = config.taskConfig.retry || false
+    this.checkGrading = config.taskConfig.grading || false
+
+    this.displayInteractiveNotation = config.selectInteractiveNotation === "interact"
+
+    if (this.noChecks) {
+      this.checkGrading = false
+    }
+
+    this.pointsPassing = config.taskConfig.passPercentage
 
     // Get previous state from content data
-    if (contentData != undefined && contentData?.previousState != undefined){
-      if(Object.keys(contentData.previousState).length > 0) {
+    if (contentData != undefined && contentData?.previousState != undefined) {
+      if (Object.keys(contentData.previousState).length > 0) {
         this.previousState = contentData.previousState;
       }
     }
+    if (this.previousState == undefined) {
+      this.previousState = userData
+    }
 
     this.isAnswered = this.previousState && this.previousState.inputField && this.previousState.inputField !== '' || false;
-    this.ignoreScoring = this.params.behaviour?.ignoreScoring || this.taskType === "analysisText"
+    this.ignoreScoring = this.params.behaviour?.ignoreScoring
 
     this.deltaTempMap = new Map()
+    this.taskContainerHeight = 0 // height of the task container. Will only set once per Instance and shouldn't change after updating the 
 
   };
 
@@ -100,19 +124,18 @@ const AnalysisScore4LMS = (function () {
    * @param {*} e 
    */
   AnalysisScore4LMS.prototype.zoomSvg = function (e) {
-    var t = e.target
-
-    var vseContainer = t.closest(".vse-container")
+    const t = e.target
+    const vseContainer = t.closest(".vse-container")
     if (!this.deltaTempMap.has(vseContainer.id)) {
       this.deltaTempMap.set(vseContainer.id, 1.0)
     }
 
     var deltaTemp = this.deltaTempMap.get(vseContainer.id)
-
+    const zoomFactor = 100 / 1000
     if (t.classList.contains("zoomIn")) {
-      deltaTemp = deltaTemp + 200 / 1000
+      deltaTemp = deltaTemp + zoomFactor
     } else if (t.classList.contains("zoomOut")) {
-      deltaTemp = deltaTemp - 200 / 1000
+      deltaTemp = deltaTemp - zoomFactor
     }
 
     this.deltaTempMap.set(vseContainer.id, deltaTemp)
@@ -130,58 +153,62 @@ const AnalysisScore4LMS = (function () {
   AnalysisScore4LMS.prototype.registerDomElements = function () {
     const that = this;
 
-    // Create InputFields
-
-    var viewScore = this.taskType === "noInteract" ? undefined : reformatXMLString(this.previousState?.inputField) || this.params.as4lControllerGroup?.dataStorageGroup?.viewScore
-    var annotField = sanitizeXMLString(this.params.as4lControllerGroup?.dataStorageGroup?.annotationField)
-    if (viewScore != undefined) {
+    // Create InputFields 
+    if (this.studentMEI) {
       this.noteInputField = new NoteInputField({
-        notationScore: viewScore,
+        notationScore: this.studentMEI,
         previousState: this.previousState,
-        annotationField: annotField
-        //statusBar: statusBar
-      }, {
-        onInteracted: (function (params) {
-          that.handleInteracted(params);
-        }),
-        onInput: (function () {
-          that.handleInput();
-        })
-      });
-
-
-
-      if (this.params.selectTaskType === "analysisText") {
-        this.noteInputField?.disableInteraction()
-        this.textInputField = new TextInputField({
-          // TODO: Params für inputfield übernehmen
-        }
-          , {
-            onInteracted: (function (params) {
-              that.handleInteracted(params);
-            }),
-            onInput: (function () {
-              that.handleInput();
+        svgContainer: this.studentSVG,
+        afterLoadCallback: (function () { // get sure that the mei is displayed and then proceed with hiding ui elements if necessary
+          this.handleSubmitAnswer({ skipXAPI: true, vseInit: true })
+          var vsecore = this.noteInputField.vseInstance.getCore()
+          if (!(this.checkPitch || this.checkDuration) && this.checkHarmLabels) {
+            vsecore.noteInputSwitch("off")
+            vsecore.setHideUI(true)
+            var options = { annotationCanvas: false, labelCanvas: false, canvasMusicPlayer: true, scoreRects: false, manipulatorCanvas: true, sidebarContainer: true, btnToolbar: true, customToolbar: true, groups: true }
+            vsecore.setHideOptions(options)
+            vsecore.hideUI(options)
+          }
+          var container = vsecore.getContainer()
+          if (this.taskContainerHeight === 0) {
+            Array.from(container.children).forEach(c => {
+              if (c.id === "sidebarContainer") return
+              this.taskContainerHeight += c.getBoundingClientRect().height
             })
-          });
-      }
+          }
+          container.style.height = this.taskContainerHeight * 3 + "px"
+          //reset annotation Canvas to interact with it
+          const svgAnnotCanvas = vsecore.getContainer().querySelector("#annotationCanvas")
+          vsecore.getInsertModeHandler().getAnnotations().updateAnnotationList(svgAnnotCanvas);
+          vsecore.getInsertModeHandler().getAnnotations().updateLinkedTexts()
+
+        }).bind(this)
+      },
+        {
+          onInteracted: (function (params) {
+            that.handleInteracted(params);
+          }),
+          onInput: (function () {
+            that.handleInput();
+          })
+        });
     }
 
     this.setViewState(this.previousState && this.previousState.viewState || 'task');
     if (this.viewState === 'results') {
       // Need to wait until DOM is ready for us
       H5P.externalDispatcher.on('initialized', function () {
-        that.handleCheckAnswer({ skipXAPI: true });
+        that.handleSubmitAnswer({ skipXAPI: true })
       });
     }
     else if (this.viewState === 'solutions') {
       // Need to wait until DOM is ready for us
       H5P.externalDispatcher.on('initialized', function () {
-        that.handleCheckAnswer({ skipXAPI: true });
+        that.handleSubmitAnswer({ skipXAPI: true });
         that.showSolutions();
         // We need the retry button if the mastering score has not been reached or scoring is irrelevant
         if (that.getScore() < that.getMaxScore() || that.ignoreScoring || that.getMaxScore() === 0) {
-          if (that.params.behaviour.enableRetry) {
+          if (that.checkRetry) {
             that.showButton('try-again');
           }
         }
@@ -246,17 +273,20 @@ const AnalysisScore4LMS = (function () {
 
 
       d.notations?.forEach(n => {
-        if(n.constructor.name === "Object"){
+        if (n.constructor.name === "Object") {
           n = n.notationWidget
         }
-        if(n == undefined){
+        if (n == undefined) {
           throw new TypeError("Please check the object. Only xml valid strings can be displyed", n)
         }
         var svgout = parser.parseFromString(sanitizeXMLString(n), "text/html").body.firstChild
         svgout.classList.add("vse-container")
         svgout.setAttribute("id", uuidv4())
         svgout.querySelectorAll("#manipulatorCanvas, #scoreRects, #labelCanvas, #phantomCanvas").forEach(c => c.remove())
-        svgout.setAttribute("height", "200px")
+        var vb = svgout.querySelector("#interactionOverlay").getAttribute("viewBox").split(" ").map(parseFloat)
+
+        svgout.style.height = (vb[3] * 1.25).toString() + "px"
+        svgout.style.width = "100%"
 
         var zoomBtnContainer = document.createElement("div")
         zoomBtnContainer.classList.add("zoomBtnContainer")
@@ -276,18 +306,17 @@ const AnalysisScore4LMS = (function () {
 
         newDiv.prepend(svgout)
       })
-      if(d.paragraphText.length > 0){
+      if (d.paragraphText.length > 0) {
         newDiv.prepend(parser.parseFromString(d.paragraphText, "text/html").body.firstChild)
       }
       this.content.prepend(newDiv)
     })
 
-
     this.setContent(this.content);
 
     // Register Buttons
-    if(this.taskType !== "noInteract"){
-      this.addButtons(this.content);
+    if (this.displayInteractiveNotation) {
+      this.addButtons();
     }
   };
 
@@ -410,31 +439,50 @@ const AnalysisScore4LMS = (function () {
     const that = this;
 
     // Show solution button
-    that.addButton('show-solution', that.params.showSolution, function () {
-      // Not using a parameter for showSolutions to not mess with possibe future contract changes
-      that.internalShowSolutionsCall = true;
-      that.showSolutions();
-      that.internalShowSolutionsCall = false;
-    }, false, {
-      'aria-label': this.params.ariaShowSolution
-    }, {});
+    if (that.checkShowSolutions) {
+      that.addButton('show-solution', that.params.showSolution, function () {
+        // Not using a parameter for showSolutions to not mess with possibe future contract changes
+        that.showSolutions();
+      }, false, {
+        'aria-label': this.params.ariaShowSolution
+      }, {});
+    }
 
     // Check answer button
-    that.addButton('check-answer', that.params.checkAnswer, function () {
-      that.handleCheckAnswer();
+    if (!this.noChecks) {
+      var label = "Check"
+      if (that.checkGrading) label = "Submit"
+      that.addButton("check-answer", label, function () {
+        that.handleSubmitAnswer();
+      }, that.params.behaviour?.enableCheckButton, {
+        'aria-label': this.params.ariaCheck
+      }, {
+        contentData: this.extras,
+        textIfSubmitting: this.params.submitAnswer,
+      });
+    }
+
+    // Will save the current state of the score
+    that.addButton("save", "Save Progress", function () {
+      that.handleSaveProgress()
+      that.handleInteracted()
     }, that.params.behaviour?.enableCheckButton, {
       'aria-label': this.params.ariaCheck
     }, {
       contentData: this.extras,
       textIfSubmitting: this.params.submitAnswer,
     });
+    that.showButton("save")
+
 
     // Retry button
-    that.addButton('try-again', that.params.tryAgain, function () {
-      that.resetTask({ skipClear: true });
-    }, false, {
-      'aria-label': this.params.ariaRetry
-    }, {});
+    if (that.checkRetry) {
+      that.addButton('try-again', "Retry", function () {
+        that.resetTask({ skipClear: true });
+      }, false, {
+        'aria-label': this.params.ariaRetry
+      }, {});
+    }
 
   };
 
@@ -443,37 +491,28 @@ const AnalysisScore4LMS = (function () {
    * @param {object} [params = {}] Parameters.
    * @param {boolean} [params.skipXAPI = false] If true, don't trigger xAPI.
    */
-  AnalysisScore4LMS.prototype.handleCheckAnswer = function (params) {
-    const that = this;
+  AnalysisScore4LMS.prototype.handleSubmitAnswer = function (params) {
+    this.setViewState(this.previousState && this.previousState.viewState);
+    if (!["results", "solution"].some(x => x === this.viewState) && params?.vseInit === true) return
 
-    params = AnalysisScore4LMS.extend({
-      skipXAPI: false
-    }, params);
+    this.setViewState('results');
 
-    // Show message if the minimum number of characters has not been met
-    // if (that.noteinputField?.getText().length < that.params.behaviour.minimumLength) {
-    //   const message = that.params.notEnoughChars.replace(/@chars/g, that.params.behaviour.minimumLength);
-    //   that.noteinputField?.setMessageChars(message, true);
-    //   that.read(message);
-    //   return;
-    // }
+    this.noteInputField?.disable()
+    if (this.checkGrading) {
+      this.hideButton(this.submitButtonId);
+    } else if (this.checkShowSolutions) {
+      this.showButton("show-solution")
+    }
 
-    that.setViewState('results');
-
-    that.noteinputField?.disable();
-    /*
-     * Only set true on "check". Result computation may take some time if
-     * there are many keywords due to the fuzzy match checking, so it's not
-     * a good idea to do this while typing.
-     */
-    that.isAnswered = true;
-    that.handleEvaluation(params);
-
-    /* if (that.params.behaviour.enableSolutionsButton === true) {
-       that.showButton('show-solution');
-     }*/
-    //that.hideButton('check-answer');
+    this.isAnswered = true;
+    this.handleEvaluation(params);
+    this.handleSaveProgress()
   };
+
+  AnalysisScore4LMS.prototype.handleSaveProgress = function () {
+    setUserData(this.contentId, "state", this.getCurrentState(), {})
+    getUserData(this.contentId, 'state', console.log)
+  }
 
   /**
    * Get the user input from DOM.
@@ -503,15 +542,8 @@ const AnalysisScore4LMS = (function () {
    */
   AnalysisScore4LMS.prototype.handleInteracted = function (params) {
     params = params || {};
-
-
     // Deliberately keeping the state once answered
-    this.isAnswered = this.isAnswered || this.noteInputField?.getText().length > 0 || this.textInputField.getText().length > 0
-    /*if (params.updateScore) {
-      // Only triggered when explicitly requested due to potential complexity
-      this.updateScore();
-    }*/
-
+    this.isAnswered = this.isAnswered
     this.triggerXAPI('interacted');
   };
 
@@ -531,7 +563,7 @@ const AnalysisScore4LMS = (function () {
    */
   AnalysisScore4LMS.prototype.getScore = function () {
     // Return value is rounded because reporting module for moodle's H5P plugin expects integers
-    return Math.round(this.score);
+    return Math.round(this.points / this.source.length * 100);
   };
 
   /**
@@ -541,7 +573,7 @@ const AnalysisScore4LMS = (function () {
    */
   AnalysisScore4LMS.prototype.getMaxScore = function () {
     // Return value is rounded because reporting module for moodle's H5P plugin expects integers
-    return (this.ignoreScoring) ? null : this.params.behaviour?.pointsHost || Math.round(this.scoreMastering) || 100
+    return (this.checkGrading) ? 100 : null
   };
 
   /**
@@ -557,42 +589,31 @@ const AnalysisScore4LMS = (function () {
     // Insert solution after explanations or content.
     const predecessor = this.content.parentNode;
 
-    //if ((typeof this.params.solution?.sample != undefined && this.params.solution.sample !== '') || this.taskType === "analysisText") {
-    if (this.taskType === "analysisText") {
-      // We add the sample solution here to make cheating at least a little more difficult
-      if (this.solution.getElementsByClassName(SOLUTION_SAMPLE)[0].children.length === 0) {
-        const text = document.createElement('div');
-        text.classList.add(SOLUTION_SAMPLE_TEXT);
-        text.innerHTML = this.params.solution.sample;
-        this.solution.getElementsByClassName(SOLUTION_SAMPLE)[0].appendChild(text);
-      }
-
-      predecessor.parentNode.insertBefore(this.solution, predecessor.nextSibling);
-
-      // Useful for accessibility, but seems to jump to wrong position on some Safari versions
-      this.solutionAnnouncer.focus();
-    } else if (this.modelSolution != undefined) {
+    //if ((typeof this.params.solution?.sample != undefined && this.params.solution.sample !== '') || this.displayInteractiveNotation === "analysisText") {
+    if (this.solutionMEI) {
       this.noteSolution = this.buildNoteSolution()
       predecessor.parentNode.insertBefore(this.noteSolution, predecessor.nextSibling);
       var modelParams = {
-        notationScore: this.modelSolution,
+        notationScore: this.solutionMEI,
         container: [...this.noteSolution.children].reverse()[0],
         isContent: false
       }
       this.modelVSEField = new NoteInputField(modelParams)
-      this.modelVSEField.disableInteraction()
-      this.noteInputField?.disableInteraction()
+
+      setTimeout(() => {
+        this.modelVSEField.disableInteraction()
+        this.noteInputField?.disableInteraction()
+      }, 10)
+
     }
 
     this.hideButton('show-solution');
-    this.hideButton('check-answer')
+    this.hideButton("check-answer")
 
-    // Handle calls from the outside
-    if (!this.internalShowSolutionsCall) {
-      //this.hideButton('check-answer');
+    if (!this.checkRetry) {
       this.hideButton('try-again');
     } else {
-      this.showButton('try-again');
+      this.showButton("try-again")
     }
 
     this.trigger('resize');
@@ -612,10 +633,8 @@ const AnalysisScore4LMS = (function () {
     this.hideButton('show-solution');
     this.hideButton('try-again');
 
-    // QuestionSet can control check button despite not in Question Type contract
-    //if (this.params.behaviour.enableCheckButton) {
-    this.showButton('check-answer');
-    //}
+
+    this.showButton("check-answer");
 
     this.noteInputField?.enableInteraction();
     this.noteInputField?.focus();
@@ -640,7 +659,7 @@ const AnalysisScore4LMS = (function () {
    * @return {boolean} True if user passed or task is not scored.
    */
   AnalysisScore4LMS.prototype.isPassed = function () {
-    return (this.ignoreScoring || this.getScore() >= this.scorePassing);
+    return (this.ignoreScoring || this.getScore() >= this.pointsPassing);
   };
 
   /**
@@ -649,7 +668,7 @@ const AnalysisScore4LMS = (function () {
    */
   AnalysisScore4LMS.prototype.updateScore = function (results) {
     results = results || this.computeResults();
-    this.score = Math.min(this.computeScore(results), this.getMaxScore());
+    this.points = Math.min(this.computeScore(results), this.getMaxScore());
   };
 
   /**
@@ -661,9 +680,10 @@ const AnalysisScore4LMS = (function () {
     params = AnalysisScore4LMS.extend({
       skipXAPI: false
     }, params);
+    if (this.noteInputField.vseInstance.getCore() == undefined) return
     this.computeResults();
 
-    if (this.wrong != undefined && this.correct != undefined) {
+    if (this.wrong && this.correct) {
 
       this.noteInputField?.getScoreContainer().querySelectorAll(".wrong")?.forEach(m => m.classList.remove("wrong"))
       this.wrong.forEach(w => {
@@ -673,38 +693,33 @@ const AnalysisScore4LMS = (function () {
         this.noteInputField?.getScoreContainer().querySelector("#" + c)?.classList.add("correct")
       })
 
-      console.log("SCORE", this.getScore())
-      console.log("MAX SCORE", this.getMaxScore())
+      if (this.checkGrading) {
+        console.log("SCORE", this.getScore())
+        console.log("MAX SCORE", this.getMaxScore())
 
-      // Not all keyword groups might be necessary for mastering
-      // this.updateScore(results);
-      // const textScore = H5P.Question
-      //   .determineOverallFeedback(this.params.overallFeedback, this.getScore() / this.getMaxScore())
-      //   .replace('@score', this.getScore())
-      //   .replace('@total', this.getMaxScore());
-
-      // if (!this.ignoreScoring && this.getMaxScore() > 0) {
-      //   const ariaMessage = (this.params.ariaYourResult)
-      //     .replace('@score', ':num')
-      //     .replace('@total', ':total');
-      //   this.setFeedback(textScore, this.getScore(), this.getMaxScore(), ariaMessage);
-      // }
-    } else { // For text explanations a result is not generated
-      // Build explanations
-      const explanations = this.buildTextExplanation(results);
-
-      // Show explanations
-      if (explanations.length > 0) {
-        this.setExplanation(explanations, this.params?.feedbackHeader);
+        //Feedback
+        this.setFeedback("", this.getScore(), this.getMaxScore(), 'You got :num out of :total points',)
+        if (this.checkShowSolutions) {
+          this.showButton('show-solution');
+        }
+        if (this.checkRetry) {
+          this.showButton("try-again")
+        }
+        this.hideButton("check-answer")
       }
+      // }
     }
 
-    // Show and hide buttons as necessary
-    this.handleButtons(this.getScore());
+    if (this.checkGrading) {
+      // Show and hide buttons as necessary
+      this.handleButtons(this.getScore());
 
-    if (!params.skipXAPI) {
-      // Trigger xAPI statements as necessary
-      this.handleXAPI();
+      if (!params.skipXAPI) {
+        // Trigger xAPI statements as necessary
+        this.handleXAPI();
+      } else {
+        this.handleInteracted()
+      }
     }
 
     this.trigger('resize');
@@ -736,16 +751,7 @@ const AnalysisScore4LMS = (function () {
     solutionTitle.innerHTML = "Solution" //this.params.solutionTitle;
     solution.appendChild(solutionTitle);
 
-    // const solutionIntroduction = document.createElement('div');
-    // solutionIntroduction.classList.add(SOLUTION_INTRODUCTION);
-    // solutionIntroduction.innerHTML = this.params.solution.introduction;
-    // solution.appendChild(solutionIntroduction);
-
-    // const solutionSample = document.createElement('div');
-    // solutionSample.classList.add(SOLUTION_SAMPLE);
-    // solution.appendChild(solutionSample);
-
-    if (this.taskType !== "analysisText") {
+    if (this.displayInteractiveNotation !== "analysisText") {
       // make container for the model solution
       const modelSolutionContainer = document.createElement("div")
       modelSolutionContainer.classList.add("vse-model-solution")
@@ -771,49 +777,61 @@ const AnalysisScore4LMS = (function () {
    * @returns results als Map<number, string>. Number: arbitrary counting id; string: id element that is wrong
    */
   AnalysisScore4LMS.prototype.computeResults = function () {
-    switch (this.taskType) {
-      case "noInteraction":
-        break;
-      case "harmLabels":
-        this.evaluateHarmLabels()
-        break;
-      case "chords":
-        this.evaluateChords()
-        break;
-      case "score":
-        this.compareMEIplain()
-        break;
-      case "analysisText":
-        break;
-    }
+    if (this.checkHarmLabels) this.evaluateHarmLabels()
+    if (this.checkDuration) this.evaluateRhythm()
+    if (this.checkPitch) this.evaluatePitch()
+    if (this.checkTextboxes) this.evaluateTextboxes()
   };
+
+  AnalysisScore4LMS.prototype.initScoringValues = function () {
+    this.source = this.source || [] // yields names for the matching table to be displayed
+    this.dummySource = this.dummySource || [] //dummySource is needed to display given wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
+    this.response = this.response || ""
+    this.correctResponsePattern = this.correctResponsePattern || ""
+    this.points = this.point || 0
+    this.wrong = this.wrong || new Array()
+    this.correct = this.correct || new Array()
+  }
+
+  AnalysisScore4LMS.prototype.summarizeScoringValues = function () {
+    this.target = this.source
+    this.response = this.response.startsWith("[,]") ? this.response.slice(3) : this.response; // delete trailing [,]
+    this.correctResponsePattern = this.correctResponsePattern.startsWith("[,]") ? this.correctResponsePattern.slice(3) : this.correctResponsePattern; //this.correctResponsePattern.substring(3)
+  }
+
+
 
   /**
    * Evaluate series of harmony setting activities.
    * THe xAPI Evaluation is modelled as interactionType "matching"
    */
   AnalysisScore4LMS.prototype.evaluateHarmLabels = function () {
-    var modelHarms = this.makeDoc(this.modelSolution).querySelectorAll("harm")
+    var modelHarms = this.makeDoc(this.solutionMEI).querySelectorAll("harm")
     var answerHarms = this.noteInputField?.getMei(true).querySelectorAll("harm")
 
-    this.source = []
-    this.dummySource = [] //dummyTource is needed to display given wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
-    this.response = ""
-    this.correctResponsePattern = ""
-    
+    this.initScoringValues()
+
     this.wrong = new Array()
     this.correct = new Array()
     var idxCounter = 0
-    this.score = 0
     modelHarms.forEach((mh, i) => {
       this.source.push(mh.textContent)
-      var hLabels = mh.textContent.replace(" ", "").split(",")
       this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
-      var hasNoMistake = hLabels.some(hl => hl === answerHarms[i].textContent.replace(" ", ""))
+
+      var hLabels
+      var aLabels
+      if (mh.textContent.trim() !== '') {
+        hLabels = mh.textContent.replace(" ", "").split(",")
+        aLabels = answerHarms[i].textContent.replace(" ", "")
+      } else { // in case of figured bass
+        hLabels = mh.querySelectorAll("f").map(f => f.textContent)
+        aLabels = answerHarms[i].querySelectorAll("f").map(f => f.textContent)
+      }
+      const hasNoMistake = hLabels.some(hl => hl === aLabels)
       if (hasNoMistake) {
         this.response = this.response + "[,]" + i + "[.]" + i
         this.correct.push(answerHarms[i].id)
-        this.score += 1
+        this.points += 1
       } else {
         this.response = this.response + "[,]" + i + "[.]" + (modelHarms.length + idxCounter).toString()
         this.dummySource.push(answerHarms[i].textContent)
@@ -821,205 +839,204 @@ const AnalysisScore4LMS = (function () {
         idxCounter += 1
       }
     })
-    
-    this.target = this.source
-    this.response = this.response.substring(3) // delete trailing [,]
-    this.correctResponsePattern = this.correctResponsePattern.substring(3)
-    this.score = this.score / modelHarms.length * this.getMaxScore()
+
+    this.summarizeScoringValues()
   }
 
-  /**
-   * 
-   */
-  AnalysisScore4LMS.prototype.evaluateChords = function () {
 
-    var modelDoc = this.makeDoc(this.modelSolution)
-    var modelHarms = modelDoc.querySelectorAll("harm")
+  AnalysisScore4LMS.prototype.evaluatePitch = function () {
+
+    var modelDoc = this.makeDoc(this.solutionMEI)
     var answerDoc = this.noteInputField?.getMei(true)
-    var answerHarms = answerDoc.querySelectorAll("harm")
+    if (!modelDoc || !answerDoc) return
+    var modelNotes = modelDoc.querySelectorAll("note, rest")
+    var answerNotes = answerDoc.querySelectorAll("note, rest")
 
-    var that = this
-    /**
-     * create a set from all notes on the same timestamp. 
-     * @param {*} harm element provides startid as id of the linkes element
-     * @param {*} doc doc in which the harm and corrosponding notes are located
-     * @returns 
-     */
-    function getNoteMaps(harm, doc) {
-      var notes = doc.querySelector("#" + harm.getAttribute("startid"))
-      var noteIdMap = new Map()
-      var noteMap = new Map()
-      var tstampNote = that.noteinputField?.getTstamp(notes)
-      var measureN = notes.closest("measure").getAttribute("n")
-      if (notes.tagName === "chord") {
-        notes = notes.querySelectorAll("note")
-      }
-      notes = Array.from(notes)
 
-      var noteId = 0
-      var allDurs = doc.querySelectorAll('measure[n="' + measureN + '"] *[dur]')
-      for (var i = 0; i < allDurs.length; i++) {
-        var d = allDurs[i]
-        if (notes.some(n => n.id === d.id)) return
-        var tstampTemp = that.noteinputField?.getTstamp(d)
-        if (tstampTemp === tstampNote) {
-          if (d.tagName === "chord") {
-            noteId += 10
+    this.initScoringValues()
 
-            var subNoteId = noteId + 1
-            d.querySelectorAll("note").forEach(n => {
-              //notes.push(n)
-              noteIdMap.set(subNoteId, n.id)
-              subNoteId += 1
-            })
-          } else {
-            //notes.push(d)
-            noteIdMap.set(noteId, d.id)
-            noteId += 10
-          }
-          break;
-        }
-      }
-
-      var noteIds = [...noteIdMap.keys()]
-      var set = new Array()
-      notes.forEach((n, i) => {
-        var accid = n.getAttribute("accid") || n.getAttribute("accid.ges") || "n"
-        var pname = n.getAttribute("pname") + accid
-        set.push(pname)
-        noteMap.set(noteIds[i], pname)
-      })
-
-      return { noteMap: noteMap, noteIdMap: noteIdMap, pitchSet: [...new Set(set)] }
-    }
-
-    function joinResponse(array){
-      array = array.map(rt => {
-        let t = rt.replace("n", "")
-        t = t.replace("s", "#")
-        if(rt[1] === "f"){
-          t = t.substring(0,1) + "b"
-        }
-        return t
-      })
-      return array.sort().join(",")
-    }
-
-    this.source = []
-    this.target = []
-    this.dummySource = []
-    this.response = ""
-    this.correctResponsePattern = ""
-
-    this.wrong = new Array()
-    this.correct = new Array()
-    this.score = 0
     var idxCounter = 0
-    modelHarms.forEach((mh, i) => {
-      var modelNotes = getNoteMaps(mh, modelDoc)
-      var modelNoteSet = modelNotes.pitchSet.sort()
-      this.target.push(mh.textContent)
-      this.source.push(joinResponse(modelNoteSet)) 
-      this.correctResponsePattern += "[,]" + i + "[.]" + i
-      var ah = answerHarms[i]
-      var answerNotes = getNoteMaps(ah, answerDoc)
-      var answerNoteMap = answerNotes.noteMap
-      var answerNoteIdMap = answerNotes.noteIdMap
 
-      var responseTemp = []
+    modelNotes.forEach((mn, i) => {
+      var answerNote = answerNotes[i]
+      this.source.push(mn)
+      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
 
-      var idsTemp = new Array()
-      var pnameTemp = new Array()
-      for (const [key, value] of answerNoteMap.entries()) {
-        if (modelNoteSet.some(pname => pname === value)) { // in this case the pitchclass is present and is therefore correct
-          pnameTemp.push(value) // track pnames that where already found. multiple notes won't be found in set, so this can be used to filter for found ids afterwards
-          modelNoteSet = modelNoteSet.filter(x => x !== value)
-          responseTemp.push(value)
-          idsTemp.push(answerNoteIdMap.get(key))
-          this.correct.push(answerNoteIdMap.get(key))
-          answerNoteMap.delete(key)
-        } else { // otherwise
-          if (!pnameTemp.some(pname => pname === value)) {
-            this.wrong.push(answerNoteIdMap.get(key))
-            responseTemp.push(value)
-          } else {
-            this.correct.push(answerNoteIdMap.get(key))
-            responseTemp.push(value)
-            idsTemp.push(answerNoteIdMap.get(key))
+      var modelAttrs = {
+        pname: mn?.getAttribute("pname"),
+        oct: this.checkOctavePosition ? mn?.getAttribute("oct") : null
+      }
+
+      var answerAttrs = {
+        pname: answerNote?.getAttribute("pname"),
+        oct: this.checkOctavePosition ? answerNote?.getAttribute("oct") : null
+      }
+
+      var isCorrect = modelAttrs.pname === answerAttrs.pname && modelAttrs.oct === answerAttrs.oct
+      if (isCorrect) {
+        this.response = this.response + "[,]" + i + "[.]" + i
+        this.correct.push(answerNote.id)
+        this.points += 1
+      } else {
+        this.response = this.response + "[,]" + i + "[.]" + (modelNotes.length + idxCounter).toString()
+        this.dummySource.push(answerAttrs)
+        this.wrong.push(answerNote.id)
+        idxCounter += 1
+      }
+    })
+
+    this.summarizeScoringValues()
+  }
+
+  AnalysisScore4LMS.prototype.evaluateRhythm = function () {
+    var modelDoc = this.makeDoc(this.solutionMEI)
+    var answerDoc = this.noteInputField?.getMei(true)
+    if (!modelDoc || !answerDoc) return
+    var modelDurs = modelDoc.querySelectorAll("[dur]")
+    var answerDurs = answerDoc.querySelectorAll("[dur]")
+
+    this.initScoringValues()
+
+    var idxCounter = 0
+
+    function joinDurs(element) {
+      var dur = element.getAttribute("dur")
+      var dots = element.getAttribute("dots")
+      switch (dots) {
+        case "0":
+          dots = ""
+          break;
+        case "1":
+          dots = "."
+          break;
+        case "2":
+          dots = ".."
+          break;
+        default:
+          dots = ""
+          break;
+      }
+      return dur + dots
+    }
+
+    modelDurs.forEach((md, i) => {
+      var modelDur = joinDurs(md)
+      var answerDur = joinDurs(answerDurs[i])
+      this.source.push(modelDur)
+      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
+      var isCorrect = modelDur === answerDur
+      if (isCorrect) {
+        this.response = this.response + "[,]" + i + "[.]" + i
+        this.correct.push(answerDurs[i].id)
+        this.points += 1
+      } else {
+        this.response = this.response + "[,]" + i + "[.]" + (modelDurs.length + idxCounter).toString()
+        this.dummySource.push(answerDur)
+        this.wrong.push(answerDurs[i].id)
+        idxCounter += 1
+      }
+    })
+
+    this.summarizeScoringValues()
+
+  }
+
+  AnalysisScore4LMS.prototype.evaluateTextboxes = function () {
+    this.initScoringValues()
+
+    function calculateSimilarity(str1, str2) {
+
+      if (!str1 || !str2) return 0
+
+      str1 = str1.toLowerCase();
+      str2 = str2.toLowerCase();
+
+      if (str1 === str2) return 1 // dont calculate if two strings are identical
+
+      // Function to tokenize a string into words
+      function tokenizeString(input) {
+        return new Set(input.split(' '));
+      }
+
+      // Calculate Levenshtein distance
+      function levenshteinDistance(s1, s2) {
+        const len1 = s1.length;
+        const len2 = s2.length;
+
+        // Create a 2D array to store the distances
+        const dp = [];
+
+        for (let i = 0; i <= len1; i++) {
+          dp[i] = [];
+          for (let j = 0; j <= len2; j++) {
+            if (i === 0) {
+              dp[i][j] = j;
+            } else if (j === 0) {
+              dp[i][j] = i;
+            } else {
+              const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+              dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,         // Deletion
+                dp[i][j - 1] + 1,         // Insertion
+                dp[i - 1][j - 1] + cost  // Substitution
+              );
+            }
           }
         }
-      }
-      if (modelNoteSet.length > 0) { // if modelNoteSet has still entries, there must be some pitch classes missing in the answer. Therefore the whole chord is cconsidered to be wrong
-        this.wrong.concat(idsTemp)
-      }
-      
 
-      if(answerNoteMap.size > 0 || modelNoteSet.length > 0){
-        this.dummySource.push(joinResponse(responseTemp))
-        this.response += "[,]" + i + "[.]" + (modelHarms.length + idxCounter).toString()
+        return dp[len1][len2];
+      }
+
+      var set1 = tokenizeString(str1);
+      var set2 = tokenizeString(str2);
+
+      set1 = sw.removeStopwords(Array.from(set1), sw.eng)
+      set1 = sw.removeStopwords(set2, sw.deu)
+
+      set2 = sw.removeStopwords(Array.from(set2), sw.eng)
+      set2 = sw.emoveStopwords(set2, sw.deu)
+
+      // Calculate Jaccard similarity
+      const intersectionSize = [...set1].filter(word => set2.has(word)).length;
+      const unionSize = set1.size + set2.size;
+      const jaccardSimilarity = intersectionSize / unionSize;
+
+      // Calculate Levenshtein distance
+      const levenshteinDist = levenshteinDistance(str1, str2);
+      const levenshteinSimilarity = 1 - levenshteinDist / Math.max(str1.length, str2.length)
+
+      // Define the weights for both similarity measures
+      const jaccardWeight = 0.3;
+      const levenshteinWeight = 1 - jaccardWeight;
+
+      // Combine the similarity measures using weights
+      return (jaccardWeight * jaccardSimilarity) + (levenshteinWeight * levenshteinSimilarity);
+    }
+
+    var parser = new DOMParser()
+    var modelAnnots = sanitizeXMLString(this.params.as4lControllerGroup?.dataStorageGroup?.annotationSolutionField)
+    modelAnnots = parser.parseFromString(modelAnnots, "text/xml").querySelectorAll("g")
+    var answerAnnots = this.noteInputField?.getAnnotationSVG()?.querySelectorAll("g")
+
+    var idxCounter = 0
+    modelAnnots.forEach((ma, i) => {
+      const sa = Array.from(answerAnnots).filter(node => node.id === ma.id)[0] // there should be only one element anyway
+      const isCorrect = calculateSimilarity(ma.querySelector(".annotDiv")?.textContent, sa?.querySelector(".annotDiv")?.textContent) > 0.4 // experiment a little with the threshold
+      if (isCorrect) {
+        this.response = this.response + "[,]" + i + "[.]" + i
+        this.correct.push(sa.id)
+        this.points += 1
+      } else {
+        this.response = this.response + "[,]" + i + "[.]" + (modelAnnots.length + idxCounter).toString()
+        this.dummySource.push(sa?.querySelector(".annotDiv")?.textContent || "")
+        this.wrong.push(ma.id)
         idxCounter += 1
-      }else{
-        this.response += "[,]" + i + "[.]" + i
       }
-
-      this.score += answerNoteMap.size === 0 && modelNoteSet.length === 0
     })
 
-
-    this.response = this.response.substring(3) // delete trailing [,]
-    this.correctResponsePattern = this.correctResponsePattern.substring(3)
-    this.score = this.score / modelHarms.length * this.getMaxScore()
-
+    this.summarizeScoringValues()
   }
 
-  /**
-   * Prepare files and send them to mei garage MusicDiff webservice. Only suitable for simple score comparison.
-   */
-  AnalysisScore4LMS.prototype.compareMEIService = function () {
-    //1. combine mei data
-    //TODO: All Tags under def-Tags (scoreDef, staffDef, etc.) must be included as attributes in corrospondig def-Tag
-    var meiCorpus = document.implementation.createDocument('http://www.music-encoding.org/ns/mei', 'meiCorpus')
-    var model = this.makeDoc(this.modelSolution)
-    var answer = this.noteInputField?.getMei(true)
-    meiCorpus.firstChild.appendChild(model.querySelector("mei"))
-    meiCorpus.firstChild.appendChild(answer.querySelector("mei"))
-    var combination = new XMLSerializer().serializeToString(meiCorpus).replace(/\ id/gi, " xml:id");
-
-    return new Promise((resolve) => {
-      var url = "https://meigarage.edirom.de/ege-webservice/Conversions/mei40Corpus%3Atext%3Axml/mei40Diff%3Atext%3Axml/"
-      var form = new FormData()
-      var blob = new Blob([combination], { type: "text/xml" })
-      form.append('fileToConvert', blob, 'comparison.xml')
-      fetch(url, {
-        method: "POST",
-        headers: {
-          //"content-type": "text/xml; charset=UTF-8"
-        },
-        body: form
-      }).then(response => {
-        if (response.status !== 200) {
-          console.log('something went wrong')
-          console.log(response)
-          throw Error(response.status)
-        }
-        return response.text()
-      }).then(mei => {
-        resolve(mei)
-      }).catch(error => {
-        console.log('received error: ')
-        console.log(error)
-        resolve()
-      })
-
-    })
-  }
-
-  /**
-   * Plain comparison of MEI based on exact note inputs
-   */
-  AnalysisScore4LMS.prototype.compareMEIplain = function () {
-
-  }
 
   /**
     * Clean mei for DOMParser
@@ -1053,88 +1070,21 @@ const AnalysisScore4LMS = (function () {
   }
 
 
-  /**
+  /* 
    * Compute the score for the results.
    * @param {Object[]} results - Results from the task.
    * @return {number} Score.
    */
   AnalysisScore4LMS.prototype.computeScore = function (results) {
-    let score = 0;
-    /* this.params.keywords.forEach(function (keyword, i) {
-       score += Math.min(results[i].length, keyword.options.occurrences) * keyword.options.points;
-     });*/
-    return this.score;
+    return this.points / this.source.length * 100;
   };
 
-  /**
-   * Build the explanations for H5P.Question.setExplanation.
-   * @param {Object} results - Results from the task.
-   * @return {Object[]} Explanations for H5P.Question.
-   */
-  AnalysisScore4LMS.prototype.buildTextExplanation = function (results) {
-    const explanations = [];
-
-    let word;
-    this.params.keywords.forEach(function (keyword, i) {
-      word = FEEDBACK_EMPTY;
-      // Keyword was not found and feedback is provided for this case
-      if (results[i].length === 0 && keyword.options.feedbackMissed) {
-        if (keyword.options.feedbackMissedWord === 'keyword') {
-          // Main keyword defined
-          word = keyword.keyword;
-        }
-        explanations.push({ correct: word, text: keyword.options.feedbackMissed });
-      }
-
-      // Keyword found and feedback is provided for this case
-      if (results[i].length > 0 && keyword.options.feedbackIncluded) {
-        // Set word in front of feedback
-        switch (keyword.options.feedbackIncludedWord) {
-          case 'keyword':
-            // Main keyword defined
-            word = keyword.keyword;
-            break;
-          case 'alternative':
-            // Alternative that was found
-            word = results[i][0].keyword;
-            break;
-          case 'answer':
-            // Answer matching an alternative at the learner typed it
-            word = results[i][0].match;
-            break;
-        }
-        explanations.push({ correct: word, text: keyword.options.feedbackIncluded });
-      }
-    });
-
-    if (explanations.length > 0) {
-      // Sort "included" before "not included", but keep order otherwise
-      explanations.sort(function (a, b) {
-        return a.correct === FEEDBACK_EMPTY && b.correct !== FEEDBACK_EMPTY;
-      });
-    }
-    return explanations;
-  };
 
   /**
    * Handle buttons' visibility.
    * @param {number} score - Score the user received.
    */
   AnalysisScore4LMS.prototype.handleButtons = function (score) {
-    //if (this.params.solution.sample && !this.solution) {
-    this.showButton('show-solution');
-    //}
-
-    // We need the retry button if the mastering score has not been reached or scoring is irrelevant
-    // if (this.score < this.getMaxScore() || this.ignoreScoring || this.getMaxScore() === 0) {
-    //   if (this.params.behaviour.enableRetry) {
-    //     this.showButton('try-again');
-    //   }
-    // }
-    // else {
-    //   this.hideButton('try-again');
-    // }
-
     this.hideButton('try-again');
   };
 
@@ -1148,7 +1098,7 @@ const AnalysisScore4LMS = (function () {
     // Additional xAPI verbs that might be useful for making analytics easier
     this.trigger(this.createAnalysisXAPIEvent('passed'));
     if (!this.ignoreScoring && this.getMaxScore() > 0) {
-      if (this.getScore() < this.scorePassing) {
+      if (this.getScore() < this.pointsPassing) {
         this.trigger(this.createAnalysisXAPIEvent('failed'));
       }
       else {
@@ -1178,39 +1128,26 @@ const AnalysisScore4LMS = (function () {
    * return {Object} XAPI definition.
    */
   AnalysisScore4LMS.prototype.getxAPIDefinition = function () {
-    var interactionType = ""
-    switch (this.taskType) {
-      case "noInteraction":
-        interactionType = "long-fill-in"
-        break;
-      case "harmLabels":
-        interactionType = "matching"
-        break;
-      case "chords":
-        interactionType = "matching"
-        break;
-      case "score":
-        interactionType = "long-fill-in"
-        break;
-      case "analysisText":
-        interactionType = "long-fill-in"
-        break;
+    var interactionType = "long-fill-in";
+
+    if (this.noChecks) {
+      interactionType = "matching"
     }
 
     const definition = {};
-      definition.name = {};
-      definition.name[this.languageTag] = this.getTitle();
-      // Fallback for h5p-php-reporting, expects en-US
-      definition.name['en-US'] = definition.name[this.languageTag];
-      // The H5P reporting module expects the "blanks" to be added to the description
-      definition.description = {}
-      definition.description[this.languageTag] = this.params.taskDescription + AnalysisScore4LMS.FILL_IN_PLACEHOLDER;
-      // Fallback for h5p-php-reporting, expects en-US
-      definition.description['en-US'] = definition.description[this.languageTag];
-      definition.type = "http://adlnet.gov/expapi/activities/cmi.interaction"
-      definition.interactionType = interactionType;
-    
-    switch (interactionType){
+    definition.name = {};
+    definition.name[this.languageTag] = this.getTitle();
+    // Fallback for h5p-php-reporting, expects en-US
+    definition.name['en-US'] = definition.name[this.languageTag];
+    // The H5P reporting module expects the "blanks" to be added to the description
+    definition.description = {}
+    definition.description[this.languageTag] = this.params.taskDescription + AnalysisScore4LMS.FILL_IN_PLACEHOLDER;
+    // Fallback for h5p-php-reporting, expects en-US
+    definition.description['en-US'] = definition.description[this.languageTag];
+    definition.type = "http://adlnet.gov/expapi/activities/cmi.interaction"
+    definition.interactionType = interactionType;
+
+    switch (interactionType) {
       case "long-fill-in":
         break;
       case "matching":
@@ -1229,16 +1166,16 @@ const AnalysisScore4LMS = (function () {
         this.source.forEach((s, i) => {
           let x = {
             "id": i,
-            "description":{
+            "description": {
               "en-US": s + "\n"
             }
           }
-          definition.source[i] = x 
+          definition.source[i] = x
         })
         this.target.forEach((t, i) => {
           let x = {
             "id": i,
-            "description":{
+            "description": {
               "en-US": t + "\n"
             }
           }
@@ -1248,17 +1185,17 @@ const AnalysisScore4LMS = (function () {
         this.dummySource.forEach((d, i) => {
           let x = {
             "id": definition.source.length,
-            "description":{
+            "description": {
               "en-US": d + "\n"
             }
           }
           definition.source[definition.source.length] = x
         })
-      
-      break;
+
+        break;
 
       default:
-      throw new Error(interactionType, " is not a valid interactionType")
+        throw new Error(interactionType, " is not a valid interactionType")
     }
 
 
@@ -1292,179 +1229,6 @@ const AnalysisScore4LMS = (function () {
     console.log(xAPIEvent);
     console.log('**************************');
     return xAPIEvent;
-  };
-
-  /**
-   * Detect exact matches of needle in haystack.
-   * @param {string} needle - Word or phrase to find.
-   * @param {string} haystack - Text to find the word or phrase in.
-   * @return {Object[]} Results: [{'keyword': needle, 'match': needle, 'index': front + pos}*].
-   */
-  AnalysisScore4LMS.prototype.detectExactMatches = function (needle, haystack) {
-    // Simply detect all exact matches and its positions in the haystack
-    const result = [];
-    let pos = -1;
-    let front = 0;
-
-    needle = needle
-      .replace(/\*/, '') // Wildcards checked separately
-      .replace(new RegExp(AnalysisScore4LMS.REGULAR_EXPRESSION_ASTERISK, 'g'), '*'); // Asterisk from regexp
-
-    while (((pos = haystack.indexOf(needle))) !== -1 && needle !== '') {
-      if (H5P.TextUtilities.isIsolated(needle, haystack)) {
-        result.push({ 'keyword': needle, 'match': needle, 'index': front + pos });
-      }
-      front += pos + needle.length;
-      haystack = haystack.substr(pos + needle.length);
-    }
-    return result;
-  };
-
-  /**
-   * Detect wildcard matches of needle in haystack.
-   * @param {string} needle - Word or phrase to find.
-   * @param {string} haystack - Text to find the word or phrase in.
-   * @param {boolean} caseSensitive - If true, alternative is case sensitive.
-   * @return {Object[]} Results: [{'keyword': needle, 'match': needle, 'index': front + pos}*].
-   */
-  AnalysisScore4LMS.prototype.detectWildcardMatches = function (needle, haystack, caseSensitive) {
-    if (needle.indexOf('*') === -1) {
-      return [];
-    }
-
-    // Clean needle from successive wildcards
-    needle = needle.replace(/[*]{2,}/g, '*');
-
-    // Clean needle from regular expression characters, * needed for wildcard
-    const regexpChars = ['\\', '.', '[', ']', '?', '+', '(', ')', '{', '}', '|', '!', '^', '-'];
-    regexpChars.forEach(function (char) {
-      needle = needle.split(char).join('\\' + char);
-    });
-
-    // We accept only characters for the wildcard
-    const regexp = new RegExp(needle.replace(/\*/g, AnalysisScore4LMS.CHARS_WILDCARD + '+'), this.getRegExpModifiers(caseSensitive));
-    const result = [];
-    let match;
-    while ((match = regexp.exec(haystack)) !== null) {
-      if (H5P.TextUtilities.isIsolated(match[0], haystack, { 'index': match.index })) {
-        result.push({ 'keyword': needle, 'match': match[0], 'index': match.index });
-      }
-    }
-    return result;
-  };
-
-  /**
-   * Detect fuzzy matches of needle in haystack.
-   * @param {string} needle - Word or phrase to find.
-   * @param {string} haystack - Text to find the word or phrase in.
-   * @param {Object[]} Results.
-   */
-  AnalysisScore4LMS.prototype.detectFuzzyMatches = function (needle, haystack) {
-    // Ideally, this should be the maximum number of allowed transformations for the Levenshtein disctance.
-    const windowSize = 2;
-    /*
-     * We cannot simple split words because we're also looking for phrases.
-     * If we were just looking for exact matches, we could use something smarter
-     * such as the KMP algorithm. Because we're dealing with fuzzy matches, using
-     * this intuitive exhaustive approach might be the best way to go.
-     */
-    const results = [];
-    // Without looking at the surroundings we'd miss words that have additional or missing chars
-    for (let size = -windowSize; size <= windowSize; size++) {
-      for (let pos = 0; pos < haystack.length; pos++) {
-        const straw = haystack.substr(pos, needle.length + size);
-        if (H5P.TextUtilities.areSimilar(needle, straw) && H5P.TextUtilities.isIsolated(straw, haystack, { 'index': pos })) {
-          // This will only add the match if it's not a duplicate that we found already in the proximity of pos
-          if (!this.contains(results, pos)) {
-            results.push({ 'keyword': needle, 'match': straw, 'index': pos });
-          }
-        }
-      }
-    }
-    return results;
-  };
-
-  /**
-   * Get all the matches found to a regular expression alternative.
-   * @param {string[]} alternatives - Alternatives.
-   * @param {string} inputTest - Original text by student.
-   * @param {boolean} caseSensitive - If true, alternative is case sensitive.
-   * @return {string[]} Matches by regular expressions.
-   */
-  AnalysisScore4LMS.prototype.getRegExpAlternatives = function (alternatives, inputTest, caseSensitive) {
-    const that = this;
-
-    return alternatives
-      .filter(function (alternative) {
-        return (alternative[0] === '/' && alternative[alternative.length - 1] === '/');
-      })
-      .map(function (alternative) {
-        const regNeedle = new RegExp(alternative.slice(1, -1), that.getRegExpModifiers(caseSensitive));
-        return inputTest.match(regNeedle);
-      })
-      .reduce(function (a, b) {
-        return a.concat(b);
-      }, [])
-      .filter(function (item) {
-        return item !== null;
-      });
-  };
-
-  /**
-   * Get modifiers for regular expressions.
-   * @param {boolean} caseSensitive - If true, alternative is case sensitive.
-   * @return {string} Modifiers for regular expressions.
-   */
-  AnalysisScore4LMS.prototype.getRegExpModifiers = function (caseSensitive) {
-    const modifiers = ['g'];
-    if (!caseSensitive) {
-      modifiers.push('i');
-    }
-
-    return modifiers.join('');
-  };
-
-  /**
-   * Merge the matches.
-   * @param {...Object[]} matches - Detected matches.
-   * @return {Object[]} Merged matches.
-   */
-  AnalysisScore4LMS.prototype.mergeMatches = function () {
-    // Sanitization
-    if (arguments.length === 0) {
-      return [];
-    }
-    if (arguments.length === 1) {
-      return arguments[0];
-    }
-
-    // Add all elements from args[1+] to args[0] if not already there close by.
-    const results = (arguments[0] || []).slice();
-    for (let i = 1; i < arguments.length; i++) {
-      const match2 = arguments[i] || [];
-      for (let j = 0; j < match2.length; j++) {
-        if (!this.contains(results, match2[j].index)) {
-          results.push(match2[j]);
-        }
-      }
-    }
-    return results.sort(function (a, b) {
-      return a.index > b.index;
-    });
-  };
-
-  /**
-   * Check if an array of detected results contains the same match in the word's proximity.
-   * Used to prevent double entries that can be caused by fuzzy matching.
-   * @param {Object} results - Preliminary results.
-   * @param {string} results.match - Match that was found before at a particular position.
-   * @param {number} results.index - Starting position of the match.
-   * @param {number} index - Index of solution to be checked for double entry.
-   */
-  AnalysisScore4LMS.prototype.contains = function (results, index) {
-    return results.some(function (result) {
-      return Math.abs(result.index - index) <= result.match.length;
-    });
   };
 
   /**
@@ -1544,11 +1308,6 @@ const AnalysisScore4LMS = (function () {
    * @return {Object} Current state.
    */
   AnalysisScore4LMS.prototype.getCurrentState = function () {
-    // if (!this.noteInputField) {
-    //   return; // may not be attached to the DOM yet
-    // }
-
-    // this.noteInputField?.updateMessageSaved(this.params.messageSave);
 
     return {
       inputField: this.noteInputField?.getMei(),
@@ -1564,7 +1323,6 @@ const AnalysisScore4LMS = (function () {
     if (AnalysisScore4LMS.VIEW_STATES.indexOf(state) === -1) {
       return;
     }
-
     this.viewState = state;
   };
 

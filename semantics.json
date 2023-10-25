@@ -17,13 +17,23 @@
         "description": "In this group dummy-fields are created to transfer aditional data from content creation to content view.",
         "fields": [
           {
-            "name": "annotationField",
+            "name": "studentSVG",
             "type": "text",
             "optional": true
           },
           {
-            "name": "viewScore",
-            "type": "text", 
+            "name": "studentMEI",
+            "type": "text",
+            "optional": true
+          },
+          {
+            "name": "solutionSVG",
+            "type": "text",
+            "optional": true
+          },
+          {
+            "name": "solutionMEI",
+            "type": "text",
             "optional": true
           }
         ]
@@ -91,7 +101,7 @@
                 "name": "meiStorage",
                 "type": "text",
                 "optional": true
-              }, 
+              },
               {
                 "name": "svgStorage",
                 "type": "text",
@@ -149,11 +159,14 @@
       ]
     }
   },
+  
+
+
   {
-    "name": "selectTaskType",
+    "name": "selectInteractiveNotation",
     "type": "select",
-    "label": "Task type",
-    "description": "Choose a task type to be displayed.",
+    "label": "Interactive Notation",
+    "description": "Choose whether or not to provide an interactive score editor to complete the task.",
     "importance": "high",
     "options": [
       {
@@ -161,21 +174,8 @@
         "label": "No Interactive Notation"
       },
       {
-        "value": "harmLabels",
-        "label": "Add Harmonylabels"
-      },
-      {
-        "value": "chords",
-        "label": "Write Chords"
-      },
-      {
-        "value": "score",
-        "label": "Free Score"
-      },
-      { "_comment": {
-          "value": "analysisText",
-          "label": "Write Analysis (Text)"
-        }
+        "value": "interact",
+        "label": "Use Interactive Notation"
       }
     ],
     "default": "noInteract"
@@ -190,7 +190,7 @@
     "showWhen": {
       "rules": [
         {
-          "field": "selectTaskType",
+          "field": "selectInteractiveNotation",
           "equals": [
             "noInteract"
           ]
@@ -198,113 +198,191 @@
       ]
     }
   },
+
   {
-    "name": "harmLabelDesc",
-    "label": "Description",
-    "optional": true,
-    "type": "text",
-    "description": "Write Chords and their (multiple) chord annotations. While solving the task the chord annotations will be shown as '?'.",
-    "widget": "showWhen",
-    "showWhen": {
-      "rules": [
-        {
-          "field": "selectTaskType",
-          "equals": [
-            "harmLabels"
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "name": "chordDesc",
-    "label": "Description",
-    "optional": true,
-    "type": "text",
-    "description": "Write Chords and their chord annotations. While solving the task the chords will be not visible but replaced by rests.",
-    "widget": "showWhen",
-    "showWhen": {
-      "rules": [
-        {
-          "field": "selectTaskType",
-          "equals": [
-            "chords"
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "name": "scoreWriteDesc",
-    "label": "Description",
-    "optional": true,
-    "type": "text",
-    "description": "A free score should be entered. There is no comparison with a stored solution.\n This praragraph is suitable e.g. for predefining segments or interactive examples. ",
-    "widget": "showWhen",
-    "showWhen": {
-      "rules": [
-        {
-          "field": "selectTaskType",
-          "equals": [
-            "score"
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "name": "analysisWriteDesc",
-    "label": "Description",
-    "optional": true,
-    "type": "text",
-    "description": "Write an analysis about the given piece. The solution has to be be provided as list of key words.",
-    "widget": "showWhen",
-    "showWhen": {
-      "rules": [
-        {
-          "field": "selectTaskType",
-          "equals": [
-            "analysisText"
-          ]
-        }
-      ]
-    }
-  },
-  {
-    "name": "interactiveNotation",
+    "name": "taskConfig",
     "type": "group",
-    "label": "Interactive Notation",
+    "label": "Task Configurations",
+    "description": "Select the properties of the task.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectInteractiveNotation",
+          "equals": [
+            "interact"
+          ]
+        }
+      ]
+    },
+    "expanded": true,
+    "fields": [
+      {
+        "name": "checkPitch",
+        "type": "boolean",
+        "label": "Check Pitch Class",
+        "description": "Check for the correct pitch class of the notes (single, chord or polyphonic).",
+        "default": false
+      },
+      {
+        "name": "checkOctavePosition",
+        "type": "boolean",
+        "label": "Check Octave Position",
+        "description": "Check for the correct octave position of each note.",
+        "default": false,
+        "widget": "showWhen",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "checkPitch",
+              "equals": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "checkDuration",
+        "type": "boolean",
+        "label": "Check Duration",
+        "description": "Check for the correct duration of each note (single, chord or polyphonic).",
+        "default": false
+      },
+      {
+        "name": "checkHarmLabels",
+        "type": "boolean",
+        "label": "Check Harmony Labels",
+        "description": "Check for the correct position and contents of harmony labels.",
+        "default": false
+      },
+      {
+        "name": "checkTextboxes",
+        "type": "boolean",
+        "label": "Check Textboxes",
+        "description": "Check for the right contents of annotation boxes.",
+        "default": false
+      },
+      {
+        "name": "grading",
+        "type": "boolean",
+        "label": "Enable Grading",
+        "description": "When checked, points are awarded based on the percentage of correct answers. Otherwise, students can review and repeat the task as many times as they wish.",
+        "default": false
+      },
+      {
+        "name": "showSolution",
+        "type": "boolean",
+        "label": "Enable Solution Button",
+        "description": "When checked, students will have access to the provided solution. When 'Enable Grading' is checked as well, the solution button will be visible after submitting the task.",
+        "default": false
+      },
+      {
+        "name": "retry",
+        "type": "boolean",
+        "label": "Enable Retry Button",
+        "description": "When checked, students will are able to redo the task. When 'Enable Grading' is checked as well, the retry button will be visible after submitting the task.",
+        "default": false
+      },
+      {
+        "name": "passPercentage",
+        "type": "number",
+        "label": "Pass percentage",
+        "description": "Percentage score required to pass the task.",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "default": 100,
+        "optional": true
+      }
+    ]
+  },
+  {
+  "name": "soundToAlign",
+    "type": "group",
+    "label": "Sound Alignment",
+    "description": "Load a sound file and align it with the solutionscore",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectInteractiveNotation",
+          "equals": [
+            "interact"
+          ]
+        }
+      ]
+    },
+    "expanded": true,
+    "fields": [
+      {
+        "name": "type",
+        "type": "library",
+        "label": "Sound To Align",
+        "importance": "medium",
+        "options": [
+          "H5P.Audio 1.5"
+        ],
+        "optional": true,
+        "description": "Optional media to display under description."
+      }
+    ]
+  },
+
+  {
+    "name": "interactiveNotation_modelSolution",
+    "type": "group",
+    "label": "Solution",
     "importance": "high",
     "expanded": false,
+    "description": "This view serves as the model solution. You might copy the contents to the student view.",
     "widget": "showWhen",
     "showWhen": {
       "rules": [
         {
-          "field": "selectTaskType",
+          "field": "selectInteractiveNotation",
           "equals": [
-            "harmLabels",
-            "chords",
-            "score",
-            "analysisText"
+            "interact"
           ]
         }
       ]
     },
     "fields": [
       {
-        "name": "notationWidget",
+        "name": "notationWidget_modelSolution",
         "type": "text",
+        "label": "Solution",
         "optional": true,
-        "widget": "notationWidget"
+        "widget": "notationWidget",
+        "description": "This view serves as the model solution. You might copy the contents to the student view."
       }
     ]
   },
   {
-    "name": "checkAnswer",
-    "type": "text",
-    "label": "Text for \"Check\" button",
-    "importance": "low",
-    "default": "Check",
-    "common": true
+    "name": "interactiveNotation_studentView",
+    "type": "group",
+    "label": "Student View",
+    "importance": "high",
+    "expanded": false,
+    "description": "This view serves as the model solution. You might copy the contents to the student view.",
+    "widget": "showWhen",
+    "showWhen": {
+      "rules": [
+        {
+          "field": "selectInteractiveNotation",
+          "equals": [
+            "interact"
+          ]
+        }
+      ]
+    },
+    "fields": [
+      {
+        "name": "notationWidget_studentView",
+        "type": "text",
+        "label": "Student View",
+        "description": "This view will be shown while completing the task. You can delete elements that can be filled in later.",
+        "optional": true,
+        "widget": "notationWidget"
+      }
+    ]
   }
 ]

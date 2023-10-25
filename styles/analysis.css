@@ -1,4 +1,4 @@
-@import '~verovioscoreeditor/src/styles/VerovioScoreEditor.css';
+@import '~vibe-editor/src/styles/VerovioScoreEditor.css';
 
 
 textarea{
@@ -7,11 +7,13 @@ textarea{
 
 .vse-container{
   position: relative !important;
-  height: 500px; /**!important;**/
+  height: 500px !important;
   overflow: scroll;
   border:1px solid black !important;
   resize: vertical;
+
 }
+
 
 .description-container{
   padding-bottom: 2%;
@@ -149,9 +151,10 @@ textarea{
   width: 100%;
   height: 100% !important;
 }
-
-.h5p-iframe{
-  height: 1000px !important;
+/**
+.h5p-frame{
+  height: 1000px !important; 
+  height: 100%;
   position: absolute;
   border: none;
   flex-direction: column;
@@ -162,9 +165,14 @@ textarea{
   height: 100% !important;
 }
 
-/* .h5p-content, .h5p-container, .h5p-question-content > div, .vse-container{
+.h5p-content, .h5p-container, .h5p-question-content > div, .vse-container{
   height: 100% !important;
-} */
+}
+
+.h5p-content, .h5p-frame{
+  overflow:visible;
+}
+**/
 
 .h5p-question-content{
   height: 90% !important;
