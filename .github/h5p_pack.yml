@@ -1,0 +1,11 @@
+name: Pack and archive content type
+
+on: [push]
+
+jobs:
+  pack-and-archive:
+    runs-on: ubuntu-latest
+    name: Pack and archive
+    steps:
+      - uses: actions/checkout@v3
+      - uses: boyum/pack-h5p-action@v1.0.0
