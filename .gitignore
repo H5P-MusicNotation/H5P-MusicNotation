@@ -1,6 +1,4 @@
 node_modules
-dist/
 *.bak
 .DS_Store
 *.env
-dist_pre/
