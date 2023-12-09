@@ -1,5 +1,5 @@
 # H5P Music Notation
-=========
+
 
 This H5P module allows you to display musical notations and model various tasks in the field of music theory interactively and in a user-friendly way. This module requires the [H5P Music Notation Controller](https://github.com/H5P-MusicNotation/H5P-MusicNotation) and [Notation Widget](https://github.com/mnowakow/h5p-notation-widget) to work.
 
