@@ -1,24 +1,24 @@
 {
-  "title": "AnalysisScore4LMS",
+  "title": "Music Notation",
   "description": "Create Music Analysis Tasks in H5P",
   "majorVersion": 1,
   "minorVersion": 0,
-  "patchVersion": 46,
+  "patchVersion": 3,
   "runnable": 1,
   "embedTypes": [
     "div"
   ],
-  "author": "Zemfi Dreamteam",
+  "author": "Matthias Nowakowski",
   "license": "MIT",
-  "machineName": "H5P.AnalysisScore4LMS",
+  "machineName": "H5P.MusicNotation",
   "preloadedJs": [
     {
-      "path": "dist/analysis.js"
+      "path": "dist/h5p-musicnotation.js"
     }
   ],
   "preloadedCss": [
     {
-      "path": "dist/analysis.css"
+      "path": "dist/h5p-musicnotation.css"
     }
   ],
   "preloadedDependencies": [
@@ -57,10 +57,10 @@
     {
       "machineName": "H5PEditor.NotationWidget",
       "majorVersion": 1,
-      "minorVersion": 1
+      "minorVersion": 2
     },
     {
-      "machineName": "H5PEditor.As4lController",
+      "machineName": "H5PEditor.MusicnotationController",
       "majorVersion": 1,
       "minorVersion": 0
     },

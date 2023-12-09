@@ -6,7 +6,7 @@ import NoteInputField from "./noteinputfield";
 import { uuidv4 } from "vibe-editor/src/scripts/js/utils/random";
 import * as sw from 'stopword';
 
-const AnalysisScore4LMS = (function () {
+const MusicNotation = (function () {
 
   /**
    * @constructor
@@ -26,12 +26,11 @@ const AnalysisScore4LMS = (function () {
    * @param {string} contentId - ContentId.
    * @param {Object} [contentData] - contentData.
    */
-  function AnalysisScore4LMS(config, contentId, contentData) {
+  function MusicNotation(config, contentId, contentData) {
     // Initialize
     if (!config) {
       return;
     }
-
     console.log("CONFIG", config, contentData)
 
     // get User Data, since in some instances contentData is not loading the state after saving it actively
@@ -43,7 +42,7 @@ const AnalysisScore4LMS = (function () {
     Question.call(this, 'analysis');
 
     // Sanitize defaults
-    this.params = AnalysisScore4LMS.extend(
+    this.params = MusicNotation.extend(
       {
         media: {},
         taskDescription: '',
@@ -51,19 +50,19 @@ const AnalysisScore4LMS = (function () {
       },
       config);
     this.contentId = contentId;
-    this.extras = AnalysisScore4LMS.extend(contentData);
+    this.extras = MusicNotation.extend(contentData);
     if (userData) {
-      this.extras = AnalysisScore4LMS.extend(userData);
+      this.extras = MusicNotation.extend(userData);
     }
     const defaultLanguage = (this.extras && this.extras.metadata) ? this.extras.metadata.defaultLanguage || 'en' : 'en';
-    this.languageTag = AnalysisScore4LMS.formatLanguageCode(defaultLanguage);
+    this.languageTag = MusicNotation.formatLanguageCode(defaultLanguage);
 
     this.points = 0;
 
-    this.solutionMEI = config.as4lControllerGroup.dataStorageGroup.solutionMEI  // is string
-    this.studentMEI = config.as4lControllerGroup.dataStorageGroup.studentMEI //MEI for the initalization of VSE  //is string
-    this.studentSVG = config.as4lControllerGroup.dataStorageGroup.studentSVG //SVG to be shown, when Tasks loads
-    //this.annotationView = config.as4lControllerGroup.dataStorageGroup.annotationViewField
+    this.solutionMEI = config.musicnotationControllerGroup.dataStorageGroup.solutionMEI  // is string
+    this.solutionSVG = config.musicnotationControllerGroup.dataStorageGroup.solutionSVG // is string
+    this.studentMEI = config.musicnotationControllerGroup.dataStorageGroup.studentMEI //MEI for the initalization of VIBE  //is string
+    this.studentSVG = config.musicnotationControllerGroup.dataStorageGroup.studentSVG //SVG to be shown, when Tasks loads
 
     this.checkPitch = config.taskConfig.checkPitch || false
     this.checkDuration = config.taskConfig.checkDuration || false
@@ -75,6 +74,13 @@ const AnalysisScore4LMS = (function () {
     this.checkShowSolutions = config.taskConfig.showSolution || false
     this.checkRetry = config.taskConfig.retry || false
     this.checkGrading = config.taskConfig.grading || false
+
+    this.alignmentMap = config.soundToAlign?.soundAlignmentJson
+    if (this.alignmentMap) {
+      this.alignmentMap = this.alignmentMap.replace(/&quot;/g, "\"")
+      this.alignmentMap = new Map(Object.entries(JSON.parse(this.alignmentMap)))
+      console.log("alignmentmap", this.alignmentMap)
+    }
 
     this.displayInteractiveNotation = config.selectInteractiveNotation === "interact"
 
@@ -94,7 +100,7 @@ const AnalysisScore4LMS = (function () {
       this.previousState = userData
     }
 
-    this.isAnswered = this.previousState && this.previousState.inputField && this.previousState.inputField !== '' || false;
+    this.isAnswered = this.previousState && this.previousState.mei && this.previousState.mei !== '' || false;
     this.ignoreScoring = this.params.behaviour?.ignoreScoring
 
     this.deltaTempMap = new Map()
@@ -103,8 +109,8 @@ const AnalysisScore4LMS = (function () {
   };
 
   // Extends Question
-  AnalysisScore4LMS.prototype = Object.create(Question.prototype);
-  AnalysisScore4LMS.prototype.constructor = AnalysisScore4LMS;
+  MusicNotation.prototype = Object.create(Question.prototype);
+  MusicNotation.prototype.constructor = MusicNotation;
 
   function sanitizeXMLString(xml) {
     return xml?.replace(/&amp;/g, "&").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&quot;/g, "\"");
@@ -123,14 +129,14 @@ const AnalysisScore4LMS = (function () {
    * Zoom SVG since it is not interactive anymore after loading from task editor
    * @param {*} e 
    */
-  AnalysisScore4LMS.prototype.zoomSvg = function (e) {
+  MusicNotation.prototype.zoomSvg = function (e) {
     const t = e.target
-    const vseContainer = t.closest(".vse-container")
-    if (!this.deltaTempMap.has(vseContainer.id)) {
-      this.deltaTempMap.set(vseContainer.id, 1.0)
+    const vibeContainer = t.closest(".vibe-container")
+    if (!this.deltaTempMap.has(vibeContainer.id)) {
+      this.deltaTempMap.set(vibeContainer.id, 1.0)
     }
 
-    var deltaTemp = this.deltaTempMap.get(vseContainer.id)
+    var deltaTemp = this.deltaTempMap.get(vibeContainer.id)
     const zoomFactor = 100 / 1000
     if (t.classList.contains("zoomIn")) {
       deltaTemp = deltaTemp + zoomFactor
@@ -138,11 +144,11 @@ const AnalysisScore4LMS = (function () {
       deltaTemp = deltaTemp - zoomFactor
     }
 
-    this.deltaTempMap.set(vseContainer.id, deltaTemp)
+    this.deltaTempMap.set(vibeContainer.id, deltaTemp)
 
-    //vseContainer.style.width = (100 * deltaTemp).toString() + "%"
+    //vibeContainer.style.width = (100 * deltaTemp).toString() + "%"
 
-    vseContainer.querySelectorAll("svg, g").forEach(svg => {
+    vibeContainer.querySelectorAll("svg, g").forEach(svg => {
       svg.style.width = (100 * deltaTemp).toString() + "%"
     })
   }
@@ -150,26 +156,29 @@ const AnalysisScore4LMS = (function () {
   /**
    * Register the DOM elements with H5P.Question.
    */
-  AnalysisScore4LMS.prototype.registerDomElements = function () {
+  MusicNotation.prototype.registerDomElements = function () {
     const that = this;
 
     // Create InputFields 
-    if (this.studentMEI) {
+    if (this.previousState?.mei || this.studentMEI) {
+      if(this.previousState?.mei) this.studentSVG = null
       this.noteInputField = new NoteInputField({
-        notationScore: this.studentMEI,
+        notationScore: this.previousState?.mei || this.studentMEI,
         previousState: this.previousState,
-        svgContainer: this.studentSVG,
+        svgContainer: this.previousState?.svg || this.studentSVG,
         afterLoadCallback: (function () { // get sure that the mei is displayed and then proceed with hiding ui elements if necessary
-          this.handleSubmitAnswer({ skipXAPI: true, vseInit: true })
-          var vsecore = this.noteInputField.vseInstance.getCore()
+          //this.handleSubmitAnswer({ skipXAPI: true, vibeInit: true })
+          var vibecore = this.noteInputField.vibeInstance.getCore()
           if (!(this.checkPitch || this.checkDuration) && this.checkHarmLabels) {
-            vsecore.noteInputSwitch("off")
-            vsecore.setHideUI(true)
+            vibecore.noteInputSwitch("off")
+            vibecore.setHideUI(true)
             var options = { annotationCanvas: false, labelCanvas: false, canvasMusicPlayer: true, scoreRects: false, manipulatorCanvas: true, sidebarContainer: true, btnToolbar: true, customToolbar: true, groups: true }
-            vsecore.setHideOptions(options)
-            vsecore.hideUI(options)
+            vibecore.setHideOptions(options)
+            vibecore.hideUI(options)
           }
-          var container = vsecore.getContainer()
+
+          //Layout
+          var container = vibecore.getContainer()
           if (this.taskContainerHeight === 0) {
             Array.from(container.children).forEach(c => {
               if (c.id === "sidebarContainer") return
@@ -178,9 +187,16 @@ const AnalysisScore4LMS = (function () {
           }
           container.style.height = this.taskContainerHeight * 3 + "px"
           //reset annotation Canvas to interact with it
-          const svgAnnotCanvas = vsecore.getContainer().querySelector("#annotationCanvas")
-          vsecore.getInsertModeHandler().getAnnotations().updateAnnotationList(svgAnnotCanvas);
-          vsecore.getInsertModeHandler().getAnnotations().updateLinkedTexts()
+          const svgAnnotCanvas = vibecore.getContainer().querySelector("#annotationCanvas")
+          vibecore.getInsertModeHandler().getAnnotations().updateAnnotationList(svgAnnotCanvas);
+          vibecore.getInsertModeHandler().getAnnotations().updateLinkedTexts()
+
+          //alignment
+          if (this.alignmentMap) {
+            const musicProcessor = vibecore.getMusicProcessor()
+            musicProcessor.setAudioTimes(this.alignmentMap)
+            this.alignmentAudioDiv.querySelector("audio").addEventListener("timeupdate", musicProcessor.fetchAudioSeconds)
+          }
 
         }).bind(this)
       },
@@ -229,6 +245,17 @@ const AnalysisScore4LMS = (function () {
       this.content.appendChild(this.textInputField.getContent())
     }
 
+    // If sound alignment was imported
+    const soundAlignmentFile = this.params.soundToAlign?.soundAlignmentFile
+    if (soundAlignmentFile) {
+      var newDiv = document.createElement("div")
+      newDiv.setAttribute("id", soundAlignmentFile.subContentId)
+      newDiv.classList.add("description-container")
+      this.alignmentAudioDiv = this.getAudioElement(soundAlignmentFile)
+      newDiv.appendChild(this.alignmentAudioDiv)
+      this.content.prepend(newDiv)
+    }
+
     // description paragraphs
     var parser = new DOMParser()
     this.params.paragraphs?.reverse().forEach(d => {
@@ -271,7 +298,6 @@ const AnalysisScore4LMS = (function () {
         }
       })
 
-
       d.notations?.forEach(n => {
         if (n.constructor.name === "Object") {
           n = n.notationWidget
@@ -280,7 +306,7 @@ const AnalysisScore4LMS = (function () {
           throw new TypeError("Please check the object. Only xml valid strings can be displyed", n)
         }
         var svgout = parser.parseFromString(sanitizeXMLString(n), "text/html").body.firstChild
-        svgout.classList.add("vse-container")
+        svgout.classList.add("vibe-container")
         svgout.setAttribute("id", uuidv4())
         svgout.querySelectorAll("#manipulatorCanvas, #scoreRects, #labelCanvas, #phantomCanvas").forEach(c => c.remove())
         var vb = svgout.querySelector("#interactionOverlay").getAttribute("viewBox").split(" ").map(parseFloat)
@@ -327,7 +353,7 @@ const AnalysisScore4LMS = (function () {
    * @param {*} params 
    * @returns 
    */
-  AnalysisScore4LMS.prototype.getAudioElement = function (params) {
+  MusicNotation.prototype.getAudioElement = function (params) {
     params.params = params.params || {};
 
     // player should be always full. Only then the Audio appears in one DOMElement
@@ -357,7 +383,7 @@ const AnalysisScore4LMS = (function () {
     return audioElement
   }
 
-  AnalysisScore4LMS.prototype.getImageElement = function (path, options) {
+  MusicNotation.prototype.getImageElement = function (path, options) {
     var that = this
     options = options ? options : {};
     // Image container
@@ -391,7 +417,7 @@ const AnalysisScore4LMS = (function () {
   };
 
 
-  AnalysisScore4LMS.prototype.getVideoElement = function (params) {
+  MusicNotation.prototype.getVideoElement = function (params) {
     var that = this
     var sections = {}
     sections.video = {
@@ -435,7 +461,7 @@ const AnalysisScore4LMS = (function () {
   /**
    * Add all the buttons that shall be passed to H5P.Question.
    */
-  AnalysisScore4LMS.prototype.addButtons = function () {
+  MusicNotation.prototype.addButtons = function () {
     const that = this;
 
     // Show solution button
@@ -491,9 +517,9 @@ const AnalysisScore4LMS = (function () {
    * @param {object} [params = {}] Parameters.
    * @param {boolean} [params.skipXAPI = false] If true, don't trigger xAPI.
    */
-  AnalysisScore4LMS.prototype.handleSubmitAnswer = function (params) {
+  MusicNotation.prototype.handleSubmitAnswer = function (params) {
     this.setViewState(this.previousState && this.previousState.viewState);
-    if (!["results", "solution"].some(x => x === this.viewState) && params?.vseInit === true) return
+    if (!["results", "solution"].some(x => x === this.viewState) && params?.vibeInit === true) return
 
     this.setViewState('results');
 
@@ -506,10 +532,12 @@ const AnalysisScore4LMS = (function () {
 
     this.isAnswered = true;
     this.handleEvaluation(params);
+    console.log("correctResponsePattern", this.correctResponsePattern)
+    console.log("actual resposepattern", this.response)
     this.handleSaveProgress()
   };
 
-  AnalysisScore4LMS.prototype.handleSaveProgress = function () {
+  MusicNotation.prototype.handleSaveProgress = function () {
     setUserData(this.contentId, "state", this.getCurrentState(), {})
     getUserData(this.contentId, 'state', console.log)
   }
@@ -519,15 +547,15 @@ const AnalysisScore4LMS = (function () {
    * @param {string} [linebreakReplacement=' '] Replacement for line breaks.
    * @return {string} Cleaned input.
    */
-  AnalysisScore4LMS.prototype.getInput = function (linebreakReplacement) {
+  MusicNotation.prototype.getInput = function (linebreakReplacement) {
     linebreakReplacement = linebreakReplacement || ' ';
 
     let userText = '';
     if (this.noteInputField) {
       userText = this.noteInputField?.getText();
     }
-    else if (this.previousState && this.previousState.inputField) {
-      userText = this.previousState.inputField;
+    else if (this.previousState && this.previousState.mei) {
+      userText = this.previousState.mei;
     }
 
     return userText
@@ -540,7 +568,7 @@ const AnalysisScore4LMS = (function () {
    * @param {object} params Parameters.
    * @param {boolean} [params.updateScore] If true, will trigger score computation.
    */
-  AnalysisScore4LMS.prototype.handleInteracted = function (params) {
+  MusicNotation.prototype.handleInteracted = function (params) {
     params = params || {};
     // Deliberately keeping the state once answered
     this.isAnswered = this.isAnswered
@@ -548,11 +576,11 @@ const AnalysisScore4LMS = (function () {
   };
 
   /**
-   * Check if AnalysisScore4LMS has been submitted/minimum length met.
+   * Check if MusicNotation has been submitted/minimum length met.
    * @return {boolean} True, if answer was given.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-1}
    */
-  AnalysisScore4LMS.prototype.getAnswerGiven = function () {
+  MusicNotation.prototype.getAnswerGiven = function () {
     return this.isAnswered;
   };
 
@@ -561,7 +589,7 @@ const AnalysisScore4LMS = (function () {
    * @return {number} latest score.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-2}
    */
-  AnalysisScore4LMS.prototype.getScore = function () {
+  MusicNotation.prototype.getScore = function () {
     // Return value is rounded because reporting module for moodle's H5P plugin expects integers
     return Math.round(this.points / this.source.length * 100);
   };
@@ -571,7 +599,7 @@ const AnalysisScore4LMS = (function () {
    * @return {number} Score necessary for mastering.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-3}
    */
-  AnalysisScore4LMS.prototype.getMaxScore = function () {
+  MusicNotation.prototype.getMaxScore = function () {
     // Return value is rounded because reporting module for moodle's H5P plugin expects integers
     return (this.checkGrading) ? 100 : null
   };
@@ -580,7 +608,7 @@ const AnalysisScore4LMS = (function () {
    * Show solution.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-4}
    */
-  AnalysisScore4LMS.prototype.showSolutions = function () {
+  MusicNotation.prototype.showSolutions = function () {
     // TODO: show differences in different score instances
 
     this.setViewState('solutions');
@@ -598,10 +626,10 @@ const AnalysisScore4LMS = (function () {
         container: [...this.noteSolution.children].reverse()[0],
         isContent: false
       }
-      this.modelVSEField = new NoteInputField(modelParams)
+      this.modelVIBEField = new NoteInputField(modelParams)
 
       setTimeout(() => {
-        this.modelVSEField.disableInteraction()
+        this.modelVIBEField.disableInteraction()
         this.noteInputField?.disableInteraction()
       }, 10)
 
@@ -623,7 +651,7 @@ const AnalysisScore4LMS = (function () {
    * Reset task.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-5}
    */
-  AnalysisScore4LMS.prototype.resetTask = function () {
+  MusicNotation.prototype.resetTask = function () {
     this.setViewState('task');
 
     this.setExplanation();
@@ -633,6 +661,7 @@ const AnalysisScore4LMS = (function () {
     this.hideButton('show-solution');
     this.hideButton('try-again');
 
+    this.initScoringValues(true)
 
     this.showButton("check-answer");
 
@@ -648,7 +677,7 @@ const AnalysisScore4LMS = (function () {
    * @return {Object} xAPI statement.
    * @see contract at {@link https://h5p.org/documentation/developers/contracts#guides-header-6}
    */
-  AnalysisScore4LMS.prototype.getXAPIData = function () {
+  MusicNotation.prototype.getXAPIData = function () {
     return {
       statement: this.getXAPIAnswerEvent().data.statement
     };
@@ -658,7 +687,7 @@ const AnalysisScore4LMS = (function () {
    * Determine whether the task has been passed by the user.
    * @return {boolean} True if user passed or task is not scored.
    */
-  AnalysisScore4LMS.prototype.isPassed = function () {
+  MusicNotation.prototype.isPassed = function () {
     return (this.ignoreScoring || this.getScore() >= this.pointsPassing);
   };
 
@@ -666,7 +695,7 @@ const AnalysisScore4LMS = (function () {
    * Update score.
    * @param {object} results Results.
    */
-  AnalysisScore4LMS.prototype.updateScore = function (results) {
+  MusicNotation.prototype.updateScore = function (results) {
     results = results || this.computeResults();
     this.points = Math.min(this.computeScore(results), this.getMaxScore());
   };
@@ -676,24 +705,61 @@ const AnalysisScore4LMS = (function () {
    * @param {object} [params = {}] Parameters.
    * @param {boolean} [params.skipXAPI = false] If true, don't trigger xAPI.
    */
-  AnalysisScore4LMS.prototype.handleEvaluation = function (params) {
-    params = AnalysisScore4LMS.extend({
+  MusicNotation.prototype.handleEvaluation = function (params) {
+    params = MusicNotation.extend({
       skipXAPI: false
     }, params);
-    if (this.noteInputField.vseInstance.getCore() == undefined) return
+    if (this.noteInputField.vibeInstance.getCore() == undefined) return
     this.computeResults();
+
+    var wrongCounter = 0
+    for (const [key, value] of this.responseMap.entries()) {
+      this.correctResponsePattern += "[,]" + key + "[.]" + key
+      console.log(key, "value", value)
+      if (value.correct === true) {
+        this.response += "[,]" + key + "[.]" + key
+        this.correct.push(value.response?.id)
+      } else if (value.correct === false) {
+        this.response += "[,]" + key + "[.]" + (this.responseMap.size + wrongCounter).toString()
+        this.wrong.push(value.response?.id)
+        wrongCounter += 1
+      } else {
+        console.error("this entry has no correct-flag: ", value)
+      }
+    }
+
+    this.response = this.response.startsWith("[,]") ? this.response.slice(3) : this.response;
+    this.correctResponsePattern = this.correctResponsePattern.startsWith("[,]") ? this.correctResponsePattern.slice(3) : this.correctResponsePattern;
+
+    console.log("correct Response Pattern", this.correctResponsePattern)
+    console.log("actual responses", this.response)
+    console.log("source", this.source)
+    console.log("dummy source", this.dummySource)
+    console.log("wrong", this.wrong)
+    console.log("correct", this.correct)
 
     if (this.wrong && this.correct) {
 
       this.noteInputField?.getScoreContainer().querySelectorAll(".wrong")?.forEach(m => m.classList.remove("wrong"))
       this.wrong.forEach(w => {
-        this.noteInputField?.getScoreContainer().querySelector("#" + w)?.classList.add("wrong")
+        if (!w) return
+        var element = this.noteInputField?.getScoreContainer().querySelector("#" + w)
+        if (element?.classList.contains("chord")) {
+          element = this.noteInputField?.getScoreContainer().querySelector(`#scoreRects [refId="${w}"]`)
+        }
+        element?.classList.add("wrong")
       })
       this.correct.forEach(c => {
-        this.noteInputField?.getScoreContainer().querySelector("#" + c)?.classList.add("correct")
+        if (!c) return
+        var element = this.noteInputField?.getScoreContainer().querySelector("#" + c)
+        if (element?.classList.contains("chord")) {
+          element = this.noteInputField?.getScoreContainer().querySelector(`#scoreRects [refId="${c}"]`)
+        }
+        element?.classList.add("correct")
       })
 
       if (this.checkGrading) {
+        console.log("POINTS", this.points)
         console.log("SCORE", this.getScore())
         console.log("MAX SCORE", this.getMaxScore())
 
@@ -731,7 +797,7 @@ const AnalysisScore4LMS = (function () {
    * Show model solution and answer mei. 
    * @return {Object} DOM object.
    */
-  AnalysisScore4LMS.prototype.buildNoteSolution = function () {
+  MusicNotation.prototype.buildNoteSolution = function () {
     var that = this
     const solution = document.createElement('div');
     solution.classList.add(SOLUTION_CONTAINER);
@@ -754,7 +820,7 @@ const AnalysisScore4LMS = (function () {
     if (this.displayInteractiveNotation !== "analysisText") {
       // make container for the model solution
       const modelSolutionContainer = document.createElement("div")
-      modelSolutionContainer.classList.add("vse-model-solution")
+      modelSolutionContainer.classList.add("vibe-model-solution")
       modelSolutionContainer.setAttribute("id", "modelSolution-" + uuidv4())
       solution.appendChild(modelSolutionContainer)
     }
@@ -765,9 +831,9 @@ const AnalysisScore4LMS = (function () {
   /**
    * Hide the solution.
    */
-  AnalysisScore4LMS.prototype.hideSolution = function () {
-    this.modelVSEField?.destroyVSEInstance()
-    this.modelVSEField = null
+  MusicNotation.prototype.hideSolution = function () {
+    this.modelVIBEField?.destroyVIBEInstance()
+    this.modelVIBEField = null
     this.solution?.parentNode?.removeChild(this.solution);
     this.noteSolution?.parentNode?.removeChild(this.noteSolution);
   };
@@ -776,26 +842,29 @@ const AnalysisScore4LMS = (function () {
    * Compute results. Compare output according to tasktype
    * @returns results als Map<number, string>. Number: arbitrary counting id; string: id element that is wrong
    */
-  AnalysisScore4LMS.prototype.computeResults = function () {
+  MusicNotation.prototype.computeResults = function () {
     if (this.checkHarmLabels) this.evaluateHarmLabels()
     if (this.checkDuration) this.evaluateRhythm()
     if (this.checkPitch) this.evaluatePitch()
     if (this.checkTextboxes) this.evaluateTextboxes()
   };
 
-  AnalysisScore4LMS.prototype.initScoringValues = function () {
-    this.source = this.source || [] // yields names for the matching table to be displayed
-    this.dummySource = this.dummySource || [] //dummySource is needed to display given wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
-    this.response = this.response || ""
-    this.correctResponsePattern = this.correctResponsePattern || ""
-    this.points = this.point || 0
-    this.wrong = this.wrong || new Array()
-    this.correct = this.correct || new Array()
+  MusicNotation.prototype.initScoringValues = function (reset = false) {
+    this.source = reset ? [] : this.source || [] // yields names for the matching table to be displayed
+    this.dummySource = reset ? [] : this.dummySource || [] //dummySource is needed to display given wrong answers in Task Evaluation. CorrectResponsesPattern MUST NOT contain these indizes
+    this.response = reset ? "" : this.response || ""
+    this.correctResponsePattern = reset ? "" : this.correctResponsePattern || ""
+    this.responseIdx = reset ? 0 : this.responseIdx || 0
+    this.resonseMap = reset ? new Map() : this.resposeMap || new Map()
+    this.points = reset ? 0 : this.points || 0
+    this.wrong = reset ? [] : this.wrong || new Array()
+    this.correct = reset ? [] : this.correct || new Array()
+    this.responseMap = reset ? new Map() : this.responseMap || new Map()
   }
 
-  AnalysisScore4LMS.prototype.summarizeScoringValues = function () {
+  MusicNotation.prototype.summarizeScoringValues = function () {
     this.target = this.source
-    this.response = this.response.startsWith("[,]") ? this.response.slice(3) : this.response; // delete trailing [,]
+    this.response = this.response.startsWith("[,]") ? this.response.slice(3) : this.response; // delete preceding [,]
     this.correctResponsePattern = this.correctResponsePattern.startsWith("[,]") ? this.correctResponsePattern.slice(3) : this.correctResponsePattern; //this.correctResponsePattern.substring(3)
   }
 
@@ -805,18 +874,17 @@ const AnalysisScore4LMS = (function () {
    * Evaluate series of harmony setting activities.
    * THe xAPI Evaluation is modelled as interactionType "matching"
    */
-  AnalysisScore4LMS.prototype.evaluateHarmLabels = function () {
+  MusicNotation.prototype.evaluateHarmLabels = function () {
     var modelHarms = this.makeDoc(this.solutionMEI).querySelectorAll("harm")
     var answerHarms = this.noteInputField?.getMei(true).querySelectorAll("harm")
 
     this.initScoringValues()
 
-    this.wrong = new Array()
-    this.correct = new Array()
     var idxCounter = 0
+    var correct = false
     modelHarms.forEach((mh, i) => {
       this.source.push(mh.textContent)
-      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
+      //this.correctResponsePattern = this.correctResponsePattern + "[,]" + this.responseIdx + "[.]" + this.responseIdx
 
       var hLabels
       var aLabels
@@ -829,66 +897,266 @@ const AnalysisScore4LMS = (function () {
       }
       const hasNoMistake = hLabels.some(hl => hl === aLabels)
       if (hasNoMistake) {
-        this.response = this.response + "[,]" + i + "[.]" + i
-        this.correct.push(answerHarms[i].id)
-        this.points += 1
+        //this.response = this.response + "[,]" + this.responseIdx + "[.]" + this.responseIdx
+        //this.correct.push(answerHarms[i].id)
+        correct = true
+        //if(!new DOMParser().parseFromString(this.cleanMEI(this.studentMEI), "text/xml").querySelector(`#${answerHarms[i].id}`)?.classList.contains("original")) this.points += 1
+        if (!answerHarms[i].classList.contains("original")){
+          this.points += 1
+        }
       } else {
-        this.response = this.response + "[,]" + i + "[.]" + (modelHarms.length + idxCounter).toString()
+        //this.response = this.response + "[,]" + this.responseIdx + "[.]" + (this.responseIdx + modelHarms.length + idxCounter).toString()
         this.dummySource.push(answerHarms[i].textContent)
-        this.wrong.push(answerHarms[i].id)
+        //this.wrong.push(answerHarms[i]?.id || null)
+        correct = false
         idxCounter += 1
       }
+
+      this.responseMap.set(this.responseIdx, { response: answerHarms[i], correct: correct })
+      this.responseIdx += 1;
     })
 
-    this.summarizeScoringValues()
+    //this.summarizeScoringValues()
   }
 
-
-  AnalysisScore4LMS.prototype.evaluatePitch = function () {
+  /**
+   * Evaluate the sequence of pitches (seperately, in chords or polyphonically) given in the given solution.
+   * @returns 
+   */
+  MusicNotation.prototype.evaluatePitch = function () {
 
     var modelDoc = this.makeDoc(this.solutionMEI)
     var answerDoc = this.noteInputField?.getMei(true)
     if (!modelDoc || !answerDoc) return
-    var modelNotes = modelDoc.querySelectorAll("note, rest")
-    var answerNotes = answerDoc.querySelectorAll("note, rest")
-
+    var modelNotes = modelDoc.querySelectorAll("chord, note[dur], rest")
+    var answerNotes = answerDoc.querySelectorAll("chord, note[dur], rest")
 
     this.initScoringValues()
 
-    var idxCounter = 0
+    /**
+     * Get timestamp for given note, so that other notes in chords or polyphone textures can be comapred.
+     * @param {*} note 
+     * @returns 
+     */
+    function getTimestamp(note) {
+      // var layer = note.closest("layer")
+      // var elements = Array.from(layer.querySelectorAll("*[dur]"))
+      var layerN = note.closest("layer").getAttribute("n")
+      var staffN = note.closest("staff").getAttribute("n")
+      var elements = note.closest("section").querySelectorAll(`staff[n="${staffN}"] > layer[n="${layerN}"] > *[dur]`)
+      elements = Array.from(elements)
+      elements = elements.filter((v, i) => i <= elements.indexOf(note))
+      var tstamp = 0
+      elements.forEach(e => {
+        var dur = parseInt(e.getAttribute("dur"))
+        tstamp += 4 / dur
+        var dots = e.getAttribute("dots")
+        var add = dur
+        if (dots !== null) {
+          for (var i = 0; i < parseInt(dots); i++) {
+            add = add / 2
+            tstamp += add
+          }
+        }
+      })
+      return tstamp
+    }
 
-    modelNotes.forEach((mn, i) => {
-      var answerNote = answerNotes[i]
-      this.source.push(mn)
-      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
+    /**
+     * Create a map of timestamps for each element in the note array
+     * @param {*} noteArray 
+     * @returns 
+     */
+    function createTimeMap(noteArray) {
+      var map = new Map()
+      noteArray.forEach(n => {
+        const tstamp = getTimestamp(n)
+        if (!tstamp) {
+          console.error("no timestamp for", n)
+          return
+        }
+        if (!map.has(tstamp)) {
+          map.set(tstamp, new Array())
+        }
+        map.get(tstamp).push(n)
+      })
 
-      var modelAttrs = {
-        pname: mn?.getAttribute("pname"),
-        oct: this.checkOctavePosition ? mn?.getAttribute("oct") : null
-      }
+      return map
+    }
 
-      var answerAttrs = {
-        pname: answerNote?.getAttribute("pname"),
-        oct: this.checkOctavePosition ? answerNote?.getAttribute("oct") : null
-      }
+    const that = this
+    function chordNotes(chord) {
+      return Array.from(chord.querySelectorAll("note"))
+    }
 
-      var isCorrect = modelAttrs.pname === answerAttrs.pname && modelAttrs.oct === answerAttrs.oct
-      if (isCorrect) {
-        this.response = this.response + "[,]" + i + "[.]" + i
-        this.correct.push(answerNote.id)
-        this.points += 1
+    var modelTimeMap = createTimeMap(modelNotes)
+    var answerTimeMap = createTimeMap(answerNotes)
+
+    //delete trailing rests
+    modelTimeMap = Array.from(modelTimeMap).reverse()
+    var sliceIdx = []
+    for (let i = 0; i < modelTimeMap.length; i++) {
+      if (modelTimeMap[i][1][0].tagName === "rest") {
+        sliceIdx.push(i)
       } else {
-        this.response = this.response + "[,]" + i + "[.]" + (modelNotes.length + idxCounter).toString()
-        this.dummySource.push(answerAttrs)
-        this.wrong.push(answerNote.id)
-        idxCounter += 1
+        break
       }
+    }
+    sliceIdx.forEach(_ => {
+      modelTimeMap = modelTimeMap.slice(1)
+    })
+    modelTimeMap = modelTimeMap.reverse()
+
+    answerTimeMap = Array.from(answerTimeMap).reverse();
+    var sliceIdx = [];
+
+    for (let i = 0; i < answerTimeMap.length; i++) {
+      if (answerTimeMap[i][1][0].tagName === "rest") {
+        sliceIdx.push(i);
+      } else {
+        break;
+      }
+    }
+
+    sliceIdx.forEach(_ => {
+      answerTimeMap = answerTimeMap.slice(1);
+    });
+
+    answerTimeMap = answerTimeMap.reverse();
+
+    // All answer elemnts will be compared against the solution/ model based on the time stamp
+    //modelTimeMap.forEach((value, key) => {
+    Array.from(modelTimeMap).forEach((arr, idx) => {
+      //var answerNotes = answerTimeMap.get(key)
+      var answerNotes = Array.from(answerTimeMap)[idx] ? Array.from(answerTimeMap)[idx][1] : []
+      var possibleAnswerNotes = []
+      var possibleModelNotes = []
+
+      //each index in "value" contains one one
+      //value.forEach(mn => {
+      arr[1].forEach((mn) => {
+        // the same for answerNotes
+        
+        if (mn.tagName === "chord") {
+          possibleModelNotes = chordNotes(mn)
+        } else { // if mn is rest or note
+          possibleModelNotes = [mn]
+        }
+      
+        answerNotes.forEach(an => {
+          //compare an with mn
+          if (mn.tagName === "chord") {
+            //possibleModelNotes = chordNotes(mn)
+            if (an.tagName === "chord") {
+              possibleAnswerNotes = chordNotes(an)
+            } else {
+              possibleAnswerNotes = [an]
+            }
+          } else { // if mn is rest or note
+            //possibleModelNotes = [mn]
+            if (an.tagName === "chord") {
+              possibleAnswerNotes = chordNotes(an)
+            } else {
+              possibleAnswerNotes = [an]
+            }
+          }
+        })
+
+        this.source.push(...possibleModelNotes)
+
+        var shiftPMNIdx = new Array()
+        var shiftPANIdx = new Array()
+
+        var foundNotePair = new Array()
+        var missingNote = new Array()
+        var excessNote = new Array()
+
+        // Collect all indezes and attributes of correct answers 
+        // These will be then used to compared the sets of elements in model notes and answer notes
+        possibleModelNotes.forEach((pmn, i) => {
+          var modelAttrs = {
+            pname: pmn.getAttribute("pname"),
+            accid: pmn.getAttribute("accid") || pmn.getAttribute("accid.ges"),
+            oct: this.checkOctavePosition ? pmn.getAttribute("oct") : null
+          }
+
+          possibleAnswerNotes.forEach((pan, j) => {
+            var answerAttrs = {
+              pname: pan.getAttribute("pname"),
+              accid: pan.getAttribute("accid") || pan.getAttribute("accid.ges"),
+              oct: this.checkOctavePosition ? pan.getAttribute("oct") : null
+            }
+
+            // Compare attributes of notes to 
+            if (modelAttrs.pname === answerAttrs.pname && modelAttrs.oct === answerAttrs.oct && modelAttrs.accid === answerAttrs.accid) {
+              shiftPMNIdx.push(i)
+              shiftPANIdx.push(j)
+              foundNotePair.push([pmn, pan])
+            }
+          })
+        })
+
+        //first, eliminate all found notes from answer notes
+        // all answer notes that are not in the model set, are considered to be excess
+        shiftPANIdx.sort((a, b) => b - a);
+        for (let i = 0; i < shiftPANIdx.length; i++) {
+          let index = shiftPANIdx[i];
+          possibleAnswerNotes.splice(index, 1)
+        }// then declare all excess notes
+        possibleAnswerNotes.forEach(pan => { excessNote.push(pan) })
+
+
+        // find all found model notes
+        // all model notes that are not in the answer set will be considered missing notes
+        shiftPMNIdx.sort((a, b) => b - a);
+        for (let i = 0; i < shiftPMNIdx.length; i++) {
+          let index = shiftPMNIdx[i];
+          possibleModelNotes.splice(index, 1)
+        }
+        possibleModelNotes.forEach(miss => missingNote.push(miss))
+
+        // fill response map and distribute points, based on array they are assigned to
+        foundNotePair.forEach(fap => {
+          if (missingNote.length > 0 || excessNote.length > 0) {
+            this.responseMap.set(this.responseIdx, { response: [...possibleAnswerNotes].join(","), correct: false })
+            return
+          } // do not award point if there are wrong notes in the chord. save chord to responseMap
+          this.responseMap.set(this.responseIdx, { response: fap[1], correct: true })
+          if (!fap[1].classList.contains("original")){
+            this.points += 1
+            console.log(this.points)
+           } // only award point if the element wasn't already present in the template
+          this.responseIdx += 1;
+        })
+
+        excessNote.forEach(e => {
+          this.dummySource.push(e)
+          this.responseMap.set(this.responseIdx, { response: e, correct: false })
+          this.responseIdx += 1;
+        })
+
+        missingNote.forEach(m => {
+          this.responseMap.set(this.responseIdx, { response: m, correct: false })
+          this.responseIdx += 1;
+        })
+      })
     })
 
-    this.summarizeScoringValues()
+    // any note that is excess than the given example will be considered as wrong answer
+    if(answerTimeMap.length > modelTimeMap.length){
+      answerTimeMap.forEach((an, idx) => {
+        if(idx <= modelTimeMap.length - 1) return
+
+        this.source.push(undefined)
+        this.responseMap.set(this.responseIdx, { response: an[1].join(","), correct: false })
+        this.responseIdx += 1;
+      })
+    }
   }
 
-  AnalysisScore4LMS.prototype.evaluateRhythm = function () {
+
+
+  MusicNotation.prototype.evaluateRhythm = function () {
     var modelDoc = this.makeDoc(this.solutionMEI)
     var answerDoc = this.noteInputField?.getMei(true)
     if (!modelDoc || !answerDoc) return
@@ -900,8 +1168,8 @@ const AnalysisScore4LMS = (function () {
     var idxCounter = 0
 
     function joinDurs(element) {
-      var dur = element.getAttribute("dur")
-      var dots = element.getAttribute("dots")
+      var dur = element?.getAttribute("dur") || ""
+      var dots = element?.getAttribute("dots")
       switch (dots) {
         case "0":
           dots = ""
@@ -918,30 +1186,38 @@ const AnalysisScore4LMS = (function () {
       }
       return dur + dots
     }
-
+    var correct = true
+    //TODO: How to dea with tied notes?
     modelDurs.forEach((md, i) => {
       var modelDur = joinDurs(md)
       var answerDur = joinDurs(answerDurs[i])
       this.source.push(modelDur)
-      this.correctResponsePattern = this.correctResponsePattern + "[,]" + i + "[.]" + i
+      //this.correctResponsePattern += "[,]" + this.responseIdx + "[.]" + this.responseIdx
       var isCorrect = modelDur === answerDur
       if (isCorrect) {
-        this.response = this.response + "[,]" + i + "[.]" + i
-        this.correct.push(answerDurs[i].id)
-        this.points += 1
+        // this.response += "[,]" + this.responseIdx + "[.]" + this.responseIdx
+        // this.correct.push(answerDurs[i].id)
+        correct = true
+        if (!answerDurs[i].classList.contains("original")){
+          this.points += 1
+          console.log(this.points)
+        }
       } else {
-        this.response = this.response + "[,]" + i + "[.]" + (modelDurs.length + idxCounter).toString()
+        // this.response += "[,]" + this.responseIdx + "[.]" + (this.responseIdx + modelDurs.length + idxCounter).toString()
         this.dummySource.push(answerDur)
-        this.wrong.push(answerDurs[i].id)
+        // this.wrong.push(answerDurs[i]?.id || null)
+        correct = false
         idxCounter += 1
       }
+      this.responseMap.set(this.responseIdx, { response: answerDurs[i], correct: correct })
+      this.responseIdx += 1;
     })
 
-    this.summarizeScoringValues()
+    //this.summarizeScoringValues()
 
   }
 
-  AnalysisScore4LMS.prototype.evaluateTextboxes = function () {
+  MusicNotation.prototype.evaluateTextboxes = function () {
     this.initScoringValues()
 
     function calculateSimilarity(str1, str2) {
@@ -966,9 +1242,9 @@ const AnalysisScore4LMS = (function () {
         // Create a 2D array to store the distances
         const dp = [];
 
-        for (let i = 0; i <= len1; i++) {
+        for (let i = 0; i <= len1; i += 1) {
           dp[i] = [];
-          for (let j = 0; j <= len2; j++) {
+          for (let j = 0; j <= len2; j += 1) {
             if (i === 0) {
               dp[i][j] = j;
             } else if (j === 0) {
@@ -991,10 +1267,13 @@ const AnalysisScore4LMS = (function () {
       var set2 = tokenizeString(str2);
 
       set1 = sw.removeStopwords(Array.from(set1), sw.eng)
-      set1 = sw.removeStopwords(set2, sw.deu)
+      set1 = sw.removeStopwords(set1, sw.deu)
 
       set2 = sw.removeStopwords(Array.from(set2), sw.eng)
-      set2 = sw.emoveStopwords(set2, sw.deu)
+      set2 = sw.removeStopwords(set2, sw.deu)
+
+      set1 = new Set(set1)
+      set2 = new Set(set2)
 
       // Calculate Jaccard similarity
       const intersectionSize = [...set1].filter(word => set2.has(word)).length;
@@ -1014,27 +1293,33 @@ const AnalysisScore4LMS = (function () {
     }
 
     var parser = new DOMParser()
-    var modelAnnots = sanitizeXMLString(this.params.as4lControllerGroup?.dataStorageGroup?.annotationSolutionField)
-    modelAnnots = parser.parseFromString(modelAnnots, "text/xml").querySelectorAll("g")
+    var modelAnnots = parser.parseFromString(sanitizeXMLString(this.solutionSVG), "text/xml").querySelectorAll("#annotationCanvas g")
     var answerAnnots = this.noteInputField?.getAnnotationSVG()?.querySelectorAll("g")
 
     var idxCounter = 0
+    var correct = false
     modelAnnots.forEach((ma, i) => {
       const sa = Array.from(answerAnnots).filter(node => node.id === ma.id)[0] // there should be only one element anyway
+      this.source.push(sa.textContent)
       const isCorrect = calculateSimilarity(ma.querySelector(".annotDiv")?.textContent, sa?.querySelector(".annotDiv")?.textContent) > 0.4 // experiment a little with the threshold
       if (isCorrect) {
-        this.response = this.response + "[,]" + i + "[.]" + i
-        this.correct.push(sa.id)
+        // this.response += "[,]" + this.responseIdx + "[.]" + this.responseIdx
+        // this.correct.push(sa.id)
+        correct = true
         this.points += 1
       } else {
-        this.response = this.response + "[,]" + i + "[.]" + (modelAnnots.length + idxCounter).toString()
+        // this.response += "[,]" + this.responseIdx + "[.]" + (this.responseIdx + modelAnnots.length + idxCounter).toString()
         this.dummySource.push(sa?.querySelector(".annotDiv")?.textContent || "")
-        this.wrong.push(ma.id)
+        // this.wrong.push(ma?.id || null)
+        correct = false
         idxCounter += 1
       }
+
+      this.responseMap.set(this.responseIdx, { response: correct ? sa : ma, correct: correct })
+      this.responseIdx += 1;
     })
 
-    this.summarizeScoringValues()
+    //this.summarizeScoringValues()
   }
 
 
@@ -1043,7 +1328,7 @@ const AnalysisScore4LMS = (function () {
     * @param mei 
     * @returns 
     */
-  AnalysisScore4LMS.prototype.cleanMEI = function (mei) {
+  MusicNotation.prototype.cleanMEI = function (mei) {
     mei = mei.replace(/\xml:id/gi, "id"); // xml:id attribute will cause parser error
     mei = mei.replace(/\n/g, ""); // delete all unnecessary newline
     mei = mei.replace(/\s{2,}/g, ""); // delete all unnecessary whitespaces
@@ -1057,7 +1342,7 @@ const AnalysisScore4LMS = (function () {
     * @param xmlDoc 
     * @returns 
     */
-  AnalysisScore4LMS.prototype.restoreXmlIdTags = function (xmlDoc, parse = true) {
+  MusicNotation.prototype.restoreXmlIdTags = function (xmlDoc, parse = true) {
     var mei = new XMLSerializer().serializeToString(xmlDoc).replace(/\ id/gi, " xml:id");
     if (parse) {
       return new DOMParser().parseFromString(mei, "text/xml");
@@ -1065,7 +1350,7 @@ const AnalysisScore4LMS = (function () {
     return mei
   }
 
-  AnalysisScore4LMS.prototype.makeDoc = function (mei) {
+  MusicNotation.prototype.makeDoc = function (mei) {
     return new DOMParser().parseFromString(this.cleanMEI(mei), "application/xml")
   }
 
@@ -1075,7 +1360,7 @@ const AnalysisScore4LMS = (function () {
    * @param {Object[]} results - Results from the task.
    * @return {number} Score.
    */
-  AnalysisScore4LMS.prototype.computeScore = function (results) {
+  MusicNotation.prototype.computeScore = function (results) {
     return this.points / this.source.length * 100;
   };
 
@@ -1084,7 +1369,7 @@ const AnalysisScore4LMS = (function () {
    * Handle buttons' visibility.
    * @param {number} score - Score the user received.
    */
-  AnalysisScore4LMS.prototype.handleButtons = function (score) {
+  MusicNotation.prototype.handleButtons = function (score) {
     this.hideButton('try-again');
   };
 
@@ -1092,7 +1377,7 @@ const AnalysisScore4LMS = (function () {
    * Handle xAPI event triggering
    * @param {number} score - Score the user received.
    */
-  AnalysisScore4LMS.prototype.handleXAPI = function () {
+  MusicNotation.prototype.handleXAPI = function () {
     this.trigger(this.getXAPIAnswerEvent());
 
     // Additional xAPI verbs that might be useful for making analytics easier
@@ -1111,13 +1396,13 @@ const AnalysisScore4LMS = (function () {
   };
 
   /**
-   * Create an xAPI event for AnalysisScore4LMS.
+   * Create an xAPI event for MusicNotation.
    * @param {string} verb - Short id of the verb we want to trigger.
    * @return {H5P.XAPIEvent} Event template.
    */
-  AnalysisScore4LMS.prototype.createAnalysisXAPIEvent = function (verb) {
+  MusicNotation.prototype.createAnalysisXAPIEvent = function (verb) {
     const xAPIEvent = this.createXAPIEventTemplate(verb);
-    AnalysisScore4LMS.extend(
+    MusicNotation.extend(
       xAPIEvent.getVerifiedStatementValue(['object', 'definition']),
       this.getxAPIDefinition());
     return xAPIEvent;
@@ -1127,10 +1412,10 @@ const AnalysisScore4LMS = (function () {
    * Get the xAPI definition for the xAPI object.
    * return {Object} XAPI definition.
    */
-  AnalysisScore4LMS.prototype.getxAPIDefinition = function () {
+  MusicNotation.prototype.getxAPIDefinition = function () {
     var interactionType = "long-fill-in";
 
-    if (this.noChecks) {
+    if (!this.noChecks) {
       interactionType = "matching"
     }
 
@@ -1141,7 +1426,7 @@ const AnalysisScore4LMS = (function () {
     definition.name['en-US'] = definition.name[this.languageTag];
     // The H5P reporting module expects the "blanks" to be added to the description
     definition.description = {}
-    definition.description[this.languageTag] = this.params.taskDescription + AnalysisScore4LMS.FILL_IN_PLACEHOLDER;
+    definition.description[this.languageTag] = this.params.taskDescription + MusicNotation.FILL_IN_PLACEHOLDER;
     // Fallback for h5p-php-reporting, expects en-US
     definition.description['en-US'] = definition.description[this.languageTag];
     definition.type = "http://adlnet.gov/expapi/activities/cmi.interaction"
@@ -1152,14 +1437,29 @@ const AnalysisScore4LMS = (function () {
         break;
       case "matching":
 
-        // var tempSource = this.source
-        // var tempTarget = this.target
-        // this.source = tempTarget
-        // this.target = tempSource
+        var tempSource = this.source
+        //var tempTarget = this.target
+        //this.source = tempTarget
+        this.target = tempSource
 
         definition.correctResponsesPattern = [this.correctResponsePattern]
         definition.source = []
         definition.target = []
+
+        function extractLabel(element) {
+          var label = element
+          if (["note", "rest", "chord"].some(tn => tn === element?.tagName)) {
+            var pitch = element.getAttribute("pname") || ""
+            var oct = element.getAttribute("oct") || ""
+            var dotNum = element.getAttribute("dots") ? 0 : element.getAttribute("dots") == 0 ? 0 : parseInt(element.getAttribute("dots"))
+            var dur = element.getAttribute("dur") || ""
+            label = pitch + oct + ":" + dur + ".".repeat(dotNum)
+          } else {
+            label = element?.textContent
+          }
+
+          return label
+        }
 
         //compute source and target separately since both can have different descriptions
         // WARNING: H5P only accepts numercial ids in xAPI Statement
@@ -1167,7 +1467,7 @@ const AnalysisScore4LMS = (function () {
           let x = {
             "id": i,
             "description": {
-              "en-US": s + "\n"
+              "en-US": extractLabel(s) + "\n"
             }
           }
           definition.source[i] = x
@@ -1176,7 +1476,7 @@ const AnalysisScore4LMS = (function () {
           let x = {
             "id": i,
             "description": {
-              "en-US": t + "\n"
+              "en-US": extractLabel(t) + "\n"
             }
           }
           definition.target[i] = x
@@ -1186,12 +1486,11 @@ const AnalysisScore4LMS = (function () {
           let x = {
             "id": definition.source.length,
             "description": {
-              "en-US": d + "\n"
+              "en-US": extractLabel(d) + "\n"
             }
           }
           definition.source[definition.source.length] = x
         })
-
         break;
 
       default:
@@ -1218,16 +1517,13 @@ const AnalysisScore4LMS = (function () {
    * Build xAPI answer event.
    * @return {H5P.XAPIEvent} xAPI answer event.
    */
-  AnalysisScore4LMS.prototype.getXAPIAnswerEvent = function () {
+  MusicNotation.prototype.getXAPIAnswerEvent = function () {
     const xAPIEvent = this.createAnalysisXAPIEvent('answered');
 
     xAPIEvent.setScoredResult(this.getScore(), this.getMaxScore(), this, true, this.isPassed());
 
     xAPIEvent.data.statement.result.response = this.response//this.noteInputField?.getText();
 
-    console.log('getXAPIAnswerEvent');
-    console.log(xAPIEvent);
-    console.log('**************************');
     return xAPIEvent;
   };
 
@@ -1236,8 +1532,8 @@ const AnalysisScore4LMS = (function () {
    * @param {...Object} arguments - Objects to be merged.
    * @return {Object} Merged objects.
    */
-  AnalysisScore4LMS.extend = function () {
-    for (let i = 1; i < arguments.length; i++) {
+  MusicNotation.extend = function () {
+    for (let i = 1; i < arguments.length; i += 1) {
       for (let key in arguments[i]) {
         if (Object.prototype.hasOwnProperty.call(arguments[i], key)) {
           if (typeof arguments[0][key] === 'object' &&
@@ -1257,12 +1553,12 @@ const AnalysisScore4LMS = (function () {
    * Get task title.
    * @return {string} Title.
    */
-  AnalysisScore4LMS.prototype.getTitle = function () {
+  MusicNotation.prototype.getTitle = function () {
     let raw;
     if (this.extras.metadata) {
       raw = this.extras.metadata.title;
     }
-    raw = raw || AnalysisScore4LMS.DEFAULT_DESCRIPTION;
+    raw = raw || MusicNotation.DEFAULT_DESCRIPTION;
 
     // H5P Core function: createTitle
     return H5P.createTitle(raw);
@@ -1274,7 +1570,7 @@ const AnalysisScore4LMS = (function () {
    * @param {string} languageTag Language tag.
    * @return {string} Formatted language tag.
    */
-  AnalysisScore4LMS.formatLanguageCode = function (languageCode) {
+  MusicNotation.formatLanguageCode = function (languageCode) {
     if (typeof languageCode !== 'string') {
       return languageCode;
     }
@@ -1298,7 +1594,7 @@ const AnalysisScore4LMS = (function () {
    * @param {string} input - Input string.
    * @return {string} Output string.
    */
-  AnalysisScore4LMS.prototype.htmlDecode = function (input) {
+  MusicNotation.prototype.htmlDecode = function (input) {
     const dparser = new DOMParser().parseFromString(input, 'text/html');
     return dparser.documentElement.textContent;
   };
@@ -1307,10 +1603,11 @@ const AnalysisScore4LMS = (function () {
    * Get current state for H5P.Question.
    * @return {Object} Current state.
    */
-  AnalysisScore4LMS.prototype.getCurrentState = function () {
+  MusicNotation.prototype.getCurrentState = function () {
 
     return {
-      inputField: this.noteInputField?.getMei(),
+      mei: this.noteInputField?.getMei(),
+      svg: this.noteInputField?.getCore().getSVG(true),
       viewState: this.viewState
     };
   };
@@ -1319,8 +1616,8 @@ const AnalysisScore4LMS = (function () {
    * Set view state.
    * @param {string} state View state.
    */
-  AnalysisScore4LMS.prototype.setViewState = function (state) {
-    if (AnalysisScore4LMS.VIEW_STATES.indexOf(state) === -1) {
+  MusicNotation.prototype.setViewState = function (state) {
+    if (MusicNotation.VIEW_STATES.indexOf(state) === -1) {
       return;
     }
     this.viewState = state;
@@ -1334,23 +1631,23 @@ const AnalysisScore4LMS = (function () {
    * common CJK characters: \u4E00-\u62FF\u6300-\u77FF\u7800-\u8CFF\u8D00-\u9FFF
    * thai chars: \u0E00-\u0E7F
    */
-  AnalysisScore4LMS.CHARS_WILDCARD = '[A-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0370-\u03FF\u0400-\u04FF\u3040-\u309F\u3040-\u30FF\u4E00-\u62FF\u6300-\u77FF\u7800-\u8CFF\u8D00-\u9FFF\u0E00-\u0E7F]';
+  MusicNotation.CHARS_WILDCARD = '[A-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0370-\u03FF\u0400-\u04FF\u3040-\u309F\u3040-\u30FF\u4E00-\u62FF\u6300-\u77FF\u7800-\u8CFF\u8D00-\u9FFF\u0E00-\u0E7F]';
 
   /** @constant {string}
    * Required to be added to xAPI object description for H5P reporting
    */
-  AnalysisScore4LMS.FILL_IN_PLACEHOLDER = '__________';
+  MusicNotation.FILL_IN_PLACEHOLDER = '__________';
 
   /** @constant {string} */
-  AnalysisScore4LMS.DEFAULT_DESCRIPTION = 'AnalysisScore4LMS';
+  MusicNotation.DEFAULT_DESCRIPTION = 'MusicNotation';
 
   /** @constant {string} */
-  AnalysisScore4LMS.REGULAR_EXPRESSION_ASTERISK = ':::H5P-AnalysisScore4LMS-REGEXP-ASTERISK:::';
+  MusicNotation.REGULAR_EXPRESSION_ASTERISK = ':::H5P-MusicNotation-REGEXP-ASTERISK:::';
 
   /** @constant {string[]} view state names*/
-  AnalysisScore4LMS.VIEW_STATES = ['task', 'results', 'solutions'];
+  MusicNotation.VIEW_STATES = ['task', 'results', 'solutions'];
 
-  return AnalysisScore4LMS;
+  return MusicNotation;
 })();
 
-export default AnalysisScore4LMS;
+export default MusicNotation;

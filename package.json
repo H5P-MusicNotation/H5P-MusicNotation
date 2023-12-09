@@ -1,6 +1,6 @@
 {
-  "name": "s4lmsanalysis",
-  "version": "1.0.0",
+  "name": "musicnotation",
+  "version": "1.0.3",
   "description": "",
   "browserslist": [
     "since 2017-06"
@@ -11,11 +11,10 @@
   "scripts": {
     "build": "./node_modules/.bin/webpack --config ./webpack.config.js",
     "watch": "./node_modules/.bin/webpack --watch --mode development",
-    "debug": "./node_modules/.bin/webpack --mode development --stats-error-details",
-    "dev": "concurrently \"cd '/Users/nowakowski/Documents/Git_Projects/VerovioScoreEditor' && npm link && tsc -w\" \"cd '/Applications/XAMPP/xamppfiles/htdocs/drupal/sites/default/files/h5p/development/AnalyseScore4LMS' && npm link verovioscoreeditor && npm run watch\" \"cd '/Applications/XAMPP/xamppfiles/htdocs/drupal/sites/default/files/h5p/development/h5p-notation-widget' && npm link verovioscoreeditor && tsc -w && npm run watch\" \"cd '/Users/nowakowski/Documents/Git_Projects/VerovioScoreEditor_DevTest' && npm link verovioscoreeditor && tsc -w && npm run watch\" \"cd '/Applications/XAMPP/xamppfiles/htdocs/drupal/sites/default/files/h5p/development/h5p-as4l-controller' && npm link verovioscoreeditor && tsc -w && npm run watch\""
+    "debug": "./node_modules/.bin/webpack --mode development --stats-error-details"
   },
   "keywords": [],
-  "author": "Zemfi dreamteam",
+  "author": "Matthias Nowakowski",
   "license": "ISC",
   "dependencies": {
     "@emmetio/xml-diff": "^2.2.0",

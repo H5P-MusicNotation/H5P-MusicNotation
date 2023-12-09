@@ -1,5 +1,5 @@
 
-import VerovioScoreEditor from 'vibe-editor';
+import VIBE from 'vibe-editor';
 import {
   jQuery as $, JoubelUI as UI, Question
 }
@@ -43,17 +43,21 @@ export default class NoteInputField {
     this.callbacks.onInteracted = this.callbacks.onInteracted || (function () { });
 
 
-    this.vseInstances = [];
+    this.vibeInstances = [];
     if(this.params.svgContainer){
       const parser = new DOMParser()
       this.scoreContainer = parser.parseFromString(this.params.svgContainer, "text/html")
       if(!this.scoreContainer.classList){
         this.scoreContainer = parser.parseFromString(this.scoreContainer.body.textContent, "text/html")
       }
-      this.scoreContainer = this.scoreContainer.querySelector(".vse-container")
+      this.scoreContainer = this.scoreContainer.querySelector(".vibe-container")
     }else{
-      this.scoreContainer = document.createElement('div');
-      this.scoreContainer.setAttribute('id', 'vseDesc-' + uuidv4());
+      if(this.params.container){
+        this.scoreContainer = this.params.container
+      }else{
+        this.scoreContainer = document.createElement('div');
+        this.scoreContainer.setAttribute('id', 'vibeDesc-' + uuidv4());
+      }
     }
     this.setListeners()
 
@@ -68,16 +72,15 @@ export default class NoteInputField {
 
     //notation
     this.notationData = this.params.notationScore
-    //this.annotData = this.params.annotationField
 
-    this.vseInstance = new VerovioScoreEditor(this.scoreContainer, { data: this.notationData }, this.meiCallback.bind(this));
+    this.vibeInstance = new VIBE(this.scoreContainer, { data: this.notationData }, this.meiCallback.bind(this));
     this.scoreContainer.addEventListener("loadingEnd", params.afterLoadCallback)
     
     this.content = document.createElement('div');
     this.content.appendChild(this.inputField);
     if(this.params.isContent !== false) this.content.appendChild(this.scoreContainer);
     
-    this.vseInstances.push(this.vseInstance);
+    this.vibeInstances.push(this.vibeInstance);
 
     var fullsizeBtn = document.createElement("button")
     fullsizeBtn.id = "fullscreenBtn_" + this.scoreContainer.id
@@ -100,7 +103,7 @@ export default class NoteInputField {
 
   setListeners() {
     var that = this
-    //this.scoreContainer.addEventListener("vseInit", this.initialLoad.bind(this))
+    //this.scoreContainer.addEventListener("vibeInit", this.initialLoad.bind(this))
     this.scoreContainer.closest(".h5p-question-content")?.querySelectorAll("div > div").forEach(d => d.addEventListener("resize", this.adjustFrameFunction))
   }
 
@@ -108,23 +111,11 @@ export default class NoteInputField {
   initialLoad() {
     this.usedIds.push(this.scoreContainer.id)
     this.scoreContainer.dispatchEvent(new Event("containerAttached"));
-    this.rootSVG = this.scoreContainer.querySelector('#rootSVG');
-    // var oldAnnotationCanvas = this.scoreContainer.querySelector("#annotationCanvas")
-    // var newAnnotationCanvas = new DOMParser().parseFromString(this.params.notationScore.annotationFieldGroup, "text/html").body.childNodes[0]
-    // newAnnotationCanvas = new DOMParser().parseFromString(newAnnotationCanvas.nodeValue, "image/svg+xml").children[0]
-
-    // if (oldAnnotationCanvas === null) {
-    //   this.scoreContainer.querySelector("#interactionOverlay").append(newAnnotationCanvas)
-    // } else {
-    //   oldAnnotationCanvas.replaceWith(newAnnotationCanvas)
-    // }
-
-    // newAnnotationCanvas.setAttribute("viewBox", this.scoreContainer.querySelector("#interactionOverlay").getAttribute("viewBox"))
-    // this.vseInstance.getCore().getInsertModeHandler().getAnnotations().setAnnotationCanvas(newAnnotationCanvas)
+    this.rootSVa = this.scoreContainer.querySelector('#rootSVG');
   }
 
   /**
-    * Load obeservers for changes in the dom, so that parameters of the vse can be updated 
+    * Load obeservers for changes in the dom, so that parameters of the vibe can be updated 
     */
   loadObservers() {
     var that = this
@@ -135,10 +126,10 @@ export default class NoteInputField {
         if (mutation.attributeName === "class") {
           var target = mutation.target
           if (target.classList.contains("h5p-question-content")) {
-            var vseContainer = target.querySelector(".vse-container")
-            if (vseContainer === null) return
-            that.vseInstances.forEach(vi => {
-              if (vi.container.id === vseContainer.id) {
+            var vibeContainer = target.querySelector(".vibe-container")
+            if (vibeContainer === null) return
+            that.vibeInstances.forEach(vi => {
+              if (vi.container.id === vibeContainer.id) {
                 var core = vi.getCore()
                 core.loadData(core.getCurrentMEI(false), false).then(() => {
                   that.afterLoadCallback()
@@ -157,21 +148,20 @@ export default class NoteInputField {
       })
     })
 
-
   };
 
   /**
-     * Configure the vse parameters as given by the core interfacing methods
-     * @param {*} vseInstance 
+     * Configure the vibe parameters as given by the core interfacing methods
+     * @param {*} vibeInstance 
      */
-  configureVSE(vseInstance) {
-    this.vseInstance = vseInstance
-    this.scoreContainer = document.getElementById(vseInstance.container.id)
-    var core = this.vseInstance.getCore()
+  configureVIBE(vibeInstance) {
+    this.vibeInstance = vibeInstance
+    this.scoreContainer = document.getElementById(vibeInstance.container.id)
+    var core = this.vibeInstance.getCore()
     var toolkit = core.getVerovioWrapper().getToolkit()
 
     toolkit.setOptions({ // here we could set some options for verovio if needed
-      //pageWidth: vseContainer.getBoundingClientRect().width,
+      //pageWidth: vibeContainer.getBoundingClientRect().width,
       adjustPageWidth: 1,
       adjustPageHeight: 1
     })
@@ -185,20 +175,20 @@ export default class NoteInputField {
   /**
      * Adjust its contents when all content is loaded
      */
-  adjustFrameResponsive(vseContainer) {
+  adjustFrameResponsive(vibeContainer) {
 
-    var containerSVG = vseContainer.querySelector("#svgContainer")
+    var containerSVG = vibeContainer.querySelector("#svgContainer")
     var containerHeight
     if (containerSVG !== null) {
       var vb = containerSVG.querySelector("#interactionOverlay").getAttribute("viewBox")?.split(" ").map(parseFloat)
       containerHeight = (vb[3] * 1.25).toString() + "px"
     }
-    vseContainer.style.height = containerHeight || "20rem"
-    vseContainer.style.width = "100%"
-    //console.log(vseContainer.style.height);
+    vibeContainer.style.height = containerHeight || "20rem"
+    vibeContainer.style.width = "100%"
+    //console.log(vibeContainer.style.height);
 
     var h5pContainer = document.querySelector(".h5p-container")
-    var showChildren = h5pContainer.querySelectorAll(".h5p-sc-set > *, .h5p-actions, .vse-container, .h5p-sc")
+    var showChildren = h5pContainer.querySelectorAll(".h5p-sc-set > *, .h5p-actions, .vibe-container, .h5p-sc")
     var h5pContainerHeight = 0
     showChildren.forEach(sc => {
       h5pContainerHeight += sc.getBoundingClientRect().height
@@ -206,14 +196,14 @@ export default class NoteInputField {
     })
     //h5pContainer.style.height =  h5pContainerHeight.toString() + "px"
     //console.log(h5pContainerHeight.toString());
-    window.frameElement.style.height = vseContainer.style.height + "px"//h5pContainerHeight.toString() + "px"
+    window.frameElement.style.height = vibeContainer.style.height + "px"//h5pContainerHeight.toString() + "px"
     window.frameElement.style.resize = "auto"
   };
   adjustFrameFunction = this.adjustFrameResponsive.bind(this)
 
   setFullscreen(e) {
     if (document.fullscreenElement) {
-      this.vseInstance.getCore().getVerovioWrapper().getToolkit().setOptions({
+      this.vibeInstance.getCore().getVerovioWrapper().getToolkit().setOptions({
         adjustPageWidth: 1,
       })
       parent.document.exitFullscreen()
@@ -223,8 +213,8 @@ export default class NoteInputField {
         containerParent = containerParent.parentElement
       }
     } else {
-      var containerParent = this.scoreContainer || this.vseInstance.container
-      this.vseInstance.getCore().getVerovioWrapper().getToolkit().setOptions({
+      var containerParent = this.scoreContainer || this.vibeInstance.container
+      this.vibeInstance.getCore().getVerovioWrapper().getToolkit().setOptions({
         adjustPageWidth: 0,
       })
       var userAgent = navigator.userAgent.toLowerCase()
@@ -256,7 +246,7 @@ export default class NoteInputField {
 
   meiCallback() {
     var that = this
-    //this.scoreContainer.querySelector("#" + this.vseInstance.getCore().getMouse2SVG().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
+    //this.scoreContainer.querySelector("#" + this.vibeInstance.getCore().getMouse2SVG().getLastMouseEnter().staff?.getAttribute("refId"))?.querySelectorAll(".wrong, .correct").forEach(el => {
       this.scoreContainer.querySelectorAll(".wrong, .correct").forEach(el => {
       el.classList.remove("wrong")
       that.scoreContainer.querySelector('[refId="' + el.id + '"]')?.classList.remove("wrong")
@@ -270,7 +260,11 @@ export default class NoteInputField {
    * @returns 
    */
   getMei(asDocument = false) {
-    return this.vseInstance.getCore()?.getCurrentMEI(asDocument)
+    return this.vibeInstance.getCore()?.getCurrentMEI(asDocument)
+  }
+
+  getSVG(){
+    return this.vibeInstance.get
   }
 
   getAnnotationSVG(){
@@ -281,7 +275,7 @@ export default class NoteInputField {
    * 
    */
   getTstamp(note) {
-    return this.vseInstance.getCore().getLabelHandler().getTimestamp(note)
+    return this.vibeInstance.getCore().getLabelHandler().getTimestamp(note)
   }
 
   /**
@@ -313,24 +307,24 @@ export default class NoteInputField {
   };
 
   disableInteraction() {
-    this.vseInstance.getCore()?.setHideUI(true)
-    this.vseInstance.getCore()?.reloadData()
+    this.vibeInstance.getCore()?.setHideUI(true)
+    this.vibeInstance.getCore()?.reloadData()
     try{
-      this.vseInstance.getCore().windowHandler?.removeListeners()
+      this.vibeInstance.getCore().windowHandler?.removeListeners()
     }catch(error){
       //yeah just go on
     }
   }
 
   enableInteraction() {
-    this.vseInstance.getCore()?.setHideUI(false)
-    this.vseInstance.getCore()?.reloadData()
+    this.vibeInstance.getCore()?.setHideUI(false)
+    this.vibeInstance.getCore()?.reloadData()
   }
 
-  destroyVSEInstance(){
-    this.vseInstance.getCore().windowHandler?.removeListeners() // for some reason this listeners still stays with 
-    this.vseInstance = null
-    delete this.vseInstance
+  destroyVIBEInstance(){
+    this.vibeInstance.getCore().windowHandler?.removeListeners() // for some reason this listeners still stays with 
+    this.vibeInstance = null
+    delete this.vibeInstance
   }
   /**
    * Disable the inputField.
@@ -365,7 +359,7 @@ export default class NoteInputField {
       this.inputField.innerHTML = previousState;
     }
     if (typeof previousState === 'object' && !Array.isArray(previousState)) {
-      this.inputField.innerHTML = previousState.inputField || '';
+      this.inputField.innerHTML = previousState.mei || '';
     }
   };
 

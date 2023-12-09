@@ -1,13 +1,13 @@
 [
   {
-    "name": "as4lControllerGroup",
+    "name": "musicnotationControllerGroup",
     "type": "group",
-    "description": "This group exists to bind and execute control logic for the task creation of the AnalysisScore4LMS package. This group will be visually hidden.",
+    "description": "This group exists to bind and execute control logic for the task creation of the MusicNotation package. This group will be visually hidden.",
     "fields": [
       {
-        "name": "as4lControllerWidget",
+        "name": "musicnotationControllerWidget",
         "type": "text",
-        "widget": "as4lController",
+        "widget": "musicnotationController",
         "optional": true,
         "description": "This field holds the widget for the controller logic."
       },
@@ -159,9 +159,6 @@
       ]
     }
   },
-  
-
-
   {
     "name": "selectInteractiveNotation",
     "type": "select",
@@ -198,7 +195,6 @@
       ]
     }
   },
-
   {
     "name": "taskConfig",
     "type": "group",
@@ -266,7 +262,7 @@
         "type": "boolean",
         "label": "Enable Grading",
         "description": "When checked, points are awarded based on the percentage of correct answers. Otherwise, students can review and repeat the task as many times as they wish.",
-        "default": false
+        "default": true
       },
       {
         "name": "showSolution",
@@ -296,10 +292,10 @@
     ]
   },
   {
-  "name": "soundToAlign",
+    "name": "soundToAlign",
     "type": "group",
     "label": "Sound Alignment",
-    "description": "Load a sound file and align it with the solutionscore",
+    "description": "Load a sound file and align it with the student view",
     "widget": "showWhen",
     "showWhen": {
       "rules": [
@@ -311,10 +307,10 @@
         }
       ]
     },
-    "expanded": true,
+    "expanded": false,
     "fields": [
       {
-        "name": "type",
+        "name": "soundAlignmentFile",
         "type": "library",
         "label": "Sound To Align",
         "importance": "medium",
@@ -322,11 +318,17 @@
           "H5P.Audio 1.5"
         ],
         "optional": true,
-        "description": "Optional media to display under description."
+        "description": "Upload your sound file to be aligned with the student view."
+      },
+      {
+        "name": "soundAlignmentJson",
+        "label": "Sound Alignment",
+        "type": "text",
+        "optional": true,
+        "description": "Updload the the JSON to align with the sound file. You can create your alignment at https://mnowakow.github.io/"
       }
     ]
   },
-
   {
     "name": "interactiveNotation_modelSolution",
     "type": "group",

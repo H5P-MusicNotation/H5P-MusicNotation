@@ -1,7 +1,7 @@
-import AnalysisScore4LMS from "./analysis.js"
-import "../styles/analysis.css"
+import MusicNotation from "./h5p-musicnotation.js"
+import "../styles/h5p-musicnotation.css"
 
 
 H5P = H5P || {};
-H5P.AnalysisScore4LMS = AnalysisScore4LMS;
+H5P.MusicNotation = MusicNotation;
 

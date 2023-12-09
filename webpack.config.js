@@ -12,7 +12,7 @@ var config = {
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'analysis.js'
+    filename: 'h5p-musicnotation.js'
   },
   module: {
     rules: [
@@ -46,7 +46,7 @@ var config = {
   },
   plugins: [
     new MiniCssExtractPlugin({
-      filename: "analysis.css"
+      filename: "h5p-musicnotation.css"
     }),
     // new FontminPlugin({
     //   autodetect: true,

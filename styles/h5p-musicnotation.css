@@ -1,11 +1,11 @@
-@import '~vibe-editor/src/styles/VerovioScoreEditor.css';
+@import '~vibe-editor/src/styles/vibe.css';
 
 
 textarea{
   width: 100%
 }
 
-.vse-container{
+.vibe-container{
   position: relative !important;
   height: 500px !important;
   overflow: scroll;
@@ -20,7 +20,7 @@ textarea{
   padding-top: 2%
 }
 
-.description-container > .vse-container{
+.description-container > .vibe-container{
   position: relative !important;
   height: 0%;
   overflow: scroll;
@@ -165,7 +165,7 @@ textarea{
   height: 100% !important;
 }
 
-.h5p-content, .h5p-container, .h5p-question-content > div, .vse-container{
+.h5p-content, .h5p-container, .h5p-question-content > div, .vibe-container{
   height: 100% !important;
 }
 
@@ -221,14 +221,18 @@ textarea{
   position: unset !important;
 }
 
+#scoreRects :is(.correct, .correct *, .wrong, .wrong *){
+  fill-opacity: 0.3 !important;
+}
+
 .wrong *, .wrong{
-  fill:crimson;
+  fill:crimson !important;
   fill-opacity: 1;
-  color: crimson;
+  color: crimson !important;
 }
 
 .correct *, .correct{
-  fill:green;
+  fill:green !important;
   fill-opacity: 1;
-  color: green;
+  color: green !important;
 }

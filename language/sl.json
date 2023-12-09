@@ -193,12 +193,12 @@
           "description": "Odstotek, ki je potreben za uspešen zaključek naloge."
         },
         {
-          "label": "Prag za obvladanje vsebine",
-          "description": "Odstotek, ki je potreben za obvladanje vsebine. Odstotek nižji od 100% bo sorazmerno prilagodil tudi največje možno število točk. Nastavitev je namenjena za pridobitev manevrskega prostora udeležencev in ne za nižanje standardov znanja."
+          "label": "Prag za obvladanje vibebine",
+          "description": "Odstotek, ki je potreben za obvladanje vibebine. Odstotek nižji od 100% bo sorazmerno prilagodil tudi največje možno število točk. Nastavitev je namenjena za pridobitev manevrskega prostora udeležencev in ne za nižanje standardov znanja."
         },
         {
           "label": "Privzeto loči velike/male črke",
-          "description": "Nastavitev vpliva na vse vnesene ključne besede (npr. onemogočeno povsod, omogočeno individualno).",
+          "description": "Nastavitev vpliva na vibe vnesene ključne besede (npr. onemogočeno povsod, omogočeno individualno).",
           "options": [
             {
               "label": "Omogočeno"
@@ -210,7 +210,7 @@
         },
         {
           "label": "Privzeto toleriraj manjše napake",
-          "description": "Nastavitev vpliva na vse vnesene ključne besede (npr. onemogočeno povsod, omogočeno individualno).",
+          "description": "Nastavitev vpliva na vibe vnesene ključne besede (npr. onemogočeno povsod, omogočeno individualno).",
           "options": [
             {
               "label": "Omogočeno"
@@ -253,7 +253,7 @@
     },
     {
       "label": "Premalo znakov",
-      "default": "Besedilo mora vsebovati najmanj naslednje število znakov: @chars",
+      "default": "Besedilo mora vibebovati najmanj naslednje število znakov: @chars",
       "description": "Sporočilo o nedoseganju najmanjšega števila znakov za besedilo odgovora. @chars je spremenljivka."
     },
     {
