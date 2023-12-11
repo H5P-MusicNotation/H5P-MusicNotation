@@ -47,7 +47,7 @@ export default class NoteInputField {
     if(this.params.svgContainer){
       const parser = new DOMParser()
       this.scoreContainer = parser.parseFromString(this.params.svgContainer, "text/html")
-      if(!this.scoreContainer.classList){
+      if(!this.scoreContainer.querySelector(".vibe-container")){
         this.scoreContainer = parser.parseFromString(this.scoreContainer.body.textContent, "text/html")
       }
       this.scoreContainer = this.scoreContainer.querySelector(".vibe-container")
@@ -264,7 +264,7 @@ export default class NoteInputField {
   }
 
   getSVG(){
-    return this.vibeInstance.get
+    return this.vibeInstance.getCore()?.getSVG(true)
   }
 
   getAnnotationSVG(){

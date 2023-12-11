@@ -22,5 +22,10 @@ Import your music file and align the cursor with the music notation.
 ### Grading
 The tasks can be graded or used as self-assessment for the students with retries and solutions.
 
+## Installation Guide + User Manual
+[Repository Wiki](https://github.com/H5P-MusicNotation/H5P-MusicNotation/wiki)
+## Resources 
+Get all working modules and dependencies at [SourceForge](https://sourceforge.net/projects/h5p-music-notation/)
+
 ## Sources
 Parts of this code are based on the H5P module [Essay](https://github.com/otacke/h5p-essay) by otacke.

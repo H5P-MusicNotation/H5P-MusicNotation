@@ -236,3 +236,7 @@ textarea{
   fill-opacity: 1;
   color: green !important;
 }
+
+.h5p-audio-not-supported-icon ~ span{
+  display: none;
+}

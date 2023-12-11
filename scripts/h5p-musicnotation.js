@@ -172,7 +172,7 @@ const MusicNotation = (function () {
           if (!(this.checkPitch || this.checkDuration) && this.checkHarmLabels) {
             vibecore.noteInputSwitch("off")
             vibecore.setHideUI(true)
-            var options = { annotationCanvas: false, labelCanvas: false, canvasMusicPlayer: true, scoreRects: false, manipulatorCanvas: true, sidebarContainer: true, btnToolbar: true, customToolbar: true, groups: true }
+            var options = { annotationCanvas: false, labelCanvas: false, canvasMusicPlayer: false, scoreRects: false, manipulatorCanvas: true, sidebarContainer: true, btnToolbar: true, customToolbar: true, groups: true }
             vibecore.setHideOptions(options)
             vibecore.hideUI(options)
           }
@@ -1034,7 +1034,7 @@ const MusicNotation = (function () {
 
       //each index in "value" contains one one
       //value.forEach(mn => {
-      arr[1].forEach((mn) => {
+      arr[1].forEach((mn, arrIdx) => {
         // the same for answerNotes
         
         if (mn.tagName === "chord") {
@@ -1043,8 +1043,9 @@ const MusicNotation = (function () {
           possibleModelNotes = [mn]
         }
       
-        answerNotes.forEach(an => {
+        //answerNotes.forEach(an => {
           //compare an with mn
+          var an = answerNotes[arrIdx]
           if (mn.tagName === "chord") {
             //possibleModelNotes = chordNotes(mn)
             if (an.tagName === "chord") {
@@ -1060,7 +1061,7 @@ const MusicNotation = (function () {
               possibleAnswerNotes = [an]
             }
           }
-        })
+        //})
 
         this.source.push(...possibleModelNotes)
 
@@ -1607,7 +1608,7 @@ const MusicNotation = (function () {
 
     return {
       mei: this.noteInputField?.getMei(),
-      svg: this.noteInputField?.getCore().getSVG(true),
+      svg: this.noteInputField?.getSVG(),
       viewState: this.viewState
     };
   };
