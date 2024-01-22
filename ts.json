@@ -1,0 +1,246 @@
+{
+  "semantics": [
+    [
+      {
+        "description": "See r\u00fchm on olemas, et siduda ja t\u00e4ita kontrolli loogika \u00fclesanne loomine MusicNotation pakett. See r\u00fchm peidetakse visuaalselt.",
+        "fields": [
+          {
+            "description": "See v\u00e4li hoiab vidinat kontrolleri loogika."
+          },
+          {
+            "description": "Sellesse r\u00fchma kuuluvad mannekeeniv\u00e4ljad, mis on loodud selleks, et edastada omavahel seotud andmeid sisu loomisest sisuvaateni.",
+            "fields": []
+          }
+        ]
+      },
+      {
+        "label": "L\u00f5iked",
+        "entity": "l\u00f5ik",
+        "description": "Igas l\u00f5ikes v\u00f5ib olla tekst, mitu m\u00e4rget ja mitu andmekandjat",
+        "field": {
+          "label": "Papragraafi sisu",
+          "fields": [
+            {
+              "label": "L\u00f5ike tekst",
+              "tags": [
+                "p",
+                "br",
+                "tugev",
+                "em"
+              ]
+            },
+            {
+              "label": "Teated",
+              "entity": "m\u00e4rge",
+              "description": "Punktide m\u00e4rked ei ole \u00fclesande lahendamisel interaktiivsed.",
+              "field": {
+                "label": "M\u00e4rkus",
+                "fields": [
+                  {
+                    "description": "Lisa n\u00e4it"
+                  },
+                  {
+                    "label": "Interaktiivne noteerimine",
+                    "description": "M\u00e4rkimise korral on m\u00e4rge sisuvaates interaktiivne, vastasel juhul kasutatakse ainult SVG- d.",
+                    "default": null
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Meedia",
+              "description": "Videote, piltide v\u00f5i audio lisamine",
+              "field": {
+                "label": "Meedia",
+                "fields": [
+                  {
+                    "label": "Liik",
+                    "options": [
+                      "H5P.Pilt 1.1",
+                      "H5P.video 1.6",
+                      "H5P.Audio 1.5"
+                    ],
+                    "description": "Kirjelduses n\u00e4idatavad vabatahtlikud andmekandjad."
+                  },
+                  {
+                    "label": "Pildi suurenduse keelamine",
+                    "default": null,
+                    "showWhen": {
+                      "rules": [
+                        {
+                          "field": "t\u00fc\u00fcp"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "label": "Interaktiivne noteerimine",
+        "description": "Vali, kas anda \u00fclesande t\u00e4itmiseks interaktiivne skooriredaktor.",
+        "options": [
+          {
+            "label": "Interaktiivne m\u00e4rge puudub"
+          },
+          {
+            "label": "Interaktiivse kirja kasutamine"
+          }
+        ],
+        "default": "noInteract"
+      },
+      {
+        "label": "Kirjeldus",
+        "description": "K\u00f5ik interaktiivsed m\u00e4rked lahendusevaates on keelatud. Esitatakse ainult l\u00f5iked.",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "vali interaktiivne teade",
+              "equals": [
+                "noInteract"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "label": "\u00dclesande seadistused",
+        "description": "Vali \u00fclesande omadused.",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "vali interaktiivne teade",
+              "equals": [
+                "koostoime"
+              ]
+            }
+          ]
+        },
+        "fields": [
+          {
+            "label": "Kontrolli l\u00f6\u00f6kide klassi",
+            "description": "Kontrollige \u00f5ige pigi klassi m\u00e4rkused (\u00fcks, akord v\u00f5i pol\u00fcfooniline).",
+            "default": null
+          },
+          {
+            "label": "Kontrolli Octave asukohta",
+            "description": "Kontrollige iga m\u00e4rkuse \u00f5iget oktaavasendit.",
+            "default": null,
+            "showWhen": {
+              "rules": [
+                {
+                  "field": "kontrollPitch"
+                }
+              ]
+            }
+          },
+          {
+            "label": "Kontrolli kestust",
+            "description": "Kontrollige iga m\u00e4rkuse \u00f5iget kestust (\u00fcksik-, akord- v\u00f5i pol\u00fcfooniline).",
+            "default": null
+          },
+          {
+            "label": "Kontrolli harmoonia silte",
+            "description": "Kontrollige harmoonia etikettide \u00f5iget asendit ja sisu.",
+            "default": null
+          },
+          {
+            "label": "M\u00e4rgi tekstikastid",
+            "description": "Kontrolli m\u00e4rkekastide \u00f5iget sisu.",
+            "default": null
+          },
+          {
+            "label": "Gradeerimise lubamine",
+            "description": "Kontrollimisel m\u00e4\u00e4ratakse punktid \u00f5igete vastuste protsendi alusel. Vastasel juhul saavad \u00f5pilased \u00fclesande \u00fcle vaadata ja korrata nii palju kordi, kui nad soovivad.",
+            "default": null
+          },
+          {
+            "label": "Lahendusnupu lubamine",
+            "description": "Kontrollimisel on \u00f5pilastel juurdep\u00e4\u00e4s esitatud lahendusele. 'Enable Grading' on samuti m\u00e4rgitud, lahuse nupp on n\u00e4htav p\u00e4rast \u00fclesande esitamist.",
+            "default": null
+          },
+          {
+            "label": "Proovi uuesti",
+            "description": "Kontrollimisel saavad \u00f5pilased \u00fclesande uuesti teha. 'Enable Grading' m\u00e4rkimisel n\u00e4idatakse p\u00e4rast \u00fclesande esitamist uuesti proovimise nuppu.",
+            "default": null
+          },
+          {
+            "label": "L\u00e4bimise protsent",
+            "description": "\u00dclesande l\u00e4bimiseks vajalik protsent.",
+            "default": null
+          }
+        ]
+      },
+      {
+        "label": "Heli joondamine",
+        "description": "Laadi helifail ja joonda see \u00f5pilase vaatega",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "vali interaktiivne teade",
+              "equals": [
+                "koostoime"
+              ]
+            }
+          ]
+        },
+        "fields": [
+          {
+            "label": "Heli joondamiseks",
+            "options": [
+              "H5P.Audio 1.5"
+            ],
+            "description": "Laadige helifail \u00fcles, et see oleks koosk\u00f5las \u00f5pilase vaatega."
+          },
+          {
+            "label": "Heli joondamine",
+            "description": "Laadi JSON \u00fcles, et viia see vastavusse helifailiga. Kohanduse saab luua aadressil https://mnowakow.github.io/"
+          }
+        ]
+      },
+      {
+        "label": "Lahus",
+        "description": "Selline vaade on mudellahendus. V\u00f5id kopeerida sisu \u00f5pilase vaatele.",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "vali interaktiivne teade",
+              "equals": [
+                "koostoime"
+              ]
+            }
+          ]
+        },
+        "fields": [
+          {
+            "label": "Lahus",
+            "description": "Selline vaade on mudellahendus. V\u00f5id kopeerida sisu \u00f5pilase vaatele."
+          }
+        ]
+      },
+      {
+        "label": "\u00d5ppurivaade",
+        "description": "Selline vaade on mudellahendus. V\u00f5id kopeerida sisu \u00f5pilase vaatele.",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "vali interaktiivne teade",
+              "equals": [
+                "koostoime"
+              ]
+            }
+          ]
+        },
+        "fields": [
+          {
+            "label": "\u00d5ppurivaade",
+            "description": "Seda vaadet n\u00e4idatakse \u00fclesande t\u00e4itmisel. Saate kustutada elemendid, mida saab t\u00e4ita hiljem."
+          }
+        ]
+      }
+    ]
+  ]
+}
