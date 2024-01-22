@@ -28,6 +28,5 @@ jobs:
         run: |
           pwd
           ls
-          cd ..
-          pwd
+          cd h5p-package
           ls
