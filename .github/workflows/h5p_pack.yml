@@ -14,12 +14,17 @@ jobs:
       - name: Install npm 
         run: npm ci
       - name: List files before packing
-        run: ls
+        run: |
+          pwd
+          ls
       - name: run h5p pack
         run: |
           npm install -g h5p
           cd ..
+          pwd
           h5p pack H5P-MusicNotation H5P-MusicNotation/h5p-package/h5p-musicnotation.h5p
       - name: List files after packing
-        run: ls
+        run: |
+          pwd
+          ls
 
