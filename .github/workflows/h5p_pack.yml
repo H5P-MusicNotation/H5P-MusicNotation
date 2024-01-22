@@ -1,11 +1,20 @@
-name: Pack and archive content type
+name: Pack H5P Content Type H5P-Music-Notation
 
-on: [push]
+on: 
+  push:
+    branches: [main]
 
 jobs:
-  pack-and-archive:
+  pack:
+    name: Pack with H5P-Music-Notation
     runs-on: ubuntu-latest
-    name: Pack and archive
     steps:
-      - uses: actions/checkout@v3
-      - uses: boyum/pack-h5p-action@v1.0.0
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+      - name: Install npm 
+        run: npm ci
+      - name: run h5p pack
+        run: |
+          npm install -g h5p
+          cd ..
+          h5p pack H5P-MusicNotation H5P-MusicNotation/package/h5p-musicnotation.h5p
