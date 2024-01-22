@@ -15,18 +15,16 @@ jobs:
         run: npm ci
       - name: Make dir for h5p package if not existent
         run: mkdir -p h5p-package
-      - name: List files before packing
-        run: |
-          pwd
-          ls
       - name: run h5p pack
         run: |
           npm install -g h5p
           cd ..
           h5p pack H5P-MusicNotation H5P-MusicNotation/h5p-package/h5p-musicnotation.h5p
-      - name: List files after packing
-        run: |
-          pwd
-          ls
-          cd h5p-package
-          ls
+      - name: Save changes to repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit-message: update h5p package by workflow
+          branch: main
+          file_patters: h5p-package/*.h5p
+      
+        
