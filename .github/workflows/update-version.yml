@@ -1,0 +1,31 @@
+name: "Sync npm and h5p version"
+
+on: 
+  release:
+    branches: [main]
+
+jobs:
+  sync_versions:
+    name: Sync Versions with package.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Update Versions
+        run: |
+          # Read package.json versions
+          MAJOR_VERSION=$(node -e "console.log(require('./package.json').version.split('.')[0])")
+          MINOR_VERSION=$(node -e "console.log(require('./package.json').version.split('.')[1])")
+          PATCH_VERSION=$(node -e "console.log(require('./package.json').version.split('.')[2])")
+
+          # Update library.json versions
+          sed -i "s/\"majorVersion\": [0-9]\+,$/\"majorVersion\": $MAJOR_VERSION,/" library.json
+          sed -i "s/\"minorVersion\": [0-9]\+,$/\"minorVersion\": $MINOR_VERSION,/" library.json
+          sed -i "s/\"patchVersion\": [0-9]\+,$/\"patchVersion\": $PATCH_VERSION,/" library.json
+      - name: Save changes to repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit-message: update library.json patch number
+          branch: main
+          file_patters: package.json, library.json

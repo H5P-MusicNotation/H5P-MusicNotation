@@ -2,3 +2,4 @@ node_modules
 *.bak
 .DS_Store
 *.env
+h5p-package
