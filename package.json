@@ -1,6 +1,9 @@
 {
   "name": "musicnotation",
-  "version": "1.0.10",
+  "version": "1.0.20",
+  "customFields": {
+    "releaseversion": "1.0.18"
+  },
   "description": "",
   "browserslist": [
     "since 2017-06"
@@ -29,8 +32,8 @@
     "node-polyfill-webpack-plugin": "^2.0.1",
     "postcss-loader": "^6.2.1",
     "stopword": "^2.0.8",
+    "vibe-editor": "^0.0.7",
     "webpack": "^5.70.0",
-    "webpack-cli": "^4.9.2",
-    "vibe-editor":"0.0.4"
+    "webpack-cli": "^4.9.2"
   }
 }

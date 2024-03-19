@@ -3,7 +3,7 @@ import {
 }
   from "./globals";
 import NoteInputField from "./noteinputfield";
-import { uuidv4 } from "vibe-editor/src/scripts/js/utils/random";
+import { uuidv4 } from "vibe-editor/src/scripts/js/scripts/utils/random";
 import * as sw from 'stopword';
 
 const MusicNotation = (function () {
@@ -161,7 +161,7 @@ const MusicNotation = (function () {
 
     // Create InputFields 
     if (this.previousState?.mei || this.studentMEI) {
-      if(this.previousState?.mei) this.studentSVG = null
+      if (this.previousState?.mei) this.studentSVG = null
       this.noteInputField = new NoteInputField({
         notationScore: this.previousState?.mei || this.studentMEI,
         previousState: this.previousState,
@@ -492,6 +492,7 @@ const MusicNotation = (function () {
     that.addButton("save", "Save Progress", function () {
       that.handleSaveProgress()
       that.handleInteracted()
+      that.trigger(that.getXAPIAnswerEvent())
     }, that.params.behaviour?.enableCheckButton, {
       'aria-label': this.params.ariaCheck
     }, {
@@ -538,8 +539,12 @@ const MusicNotation = (function () {
   };
 
   MusicNotation.prototype.handleSaveProgress = function () {
-    setUserData(this.contentId, "state", this.getCurrentState(), {})
-    getUserData(this.contentId, 'state', console.log)
+    try {
+      setUserData(this.contentId, "state", this.getCurrentState(), {})
+      getUserData(this.contentId, 'state', console.log)
+    } catch (error) {
+      console.log("Get and Set Userdata is not available here. You should probably check your LRS Settings.")
+    }
   }
 
   /**
@@ -688,7 +693,8 @@ const MusicNotation = (function () {
    * @return {boolean} True if user passed or task is not scored.
    */
   MusicNotation.prototype.isPassed = function () {
-    return (this.ignoreScoring || this.getScore() >= this.pointsPassing);
+    return this.checkGrading
+    //return (this.ignoreScoring || this.getScore() >= this.pointsPassing);
   };
 
   /**
@@ -709,7 +715,7 @@ const MusicNotation = (function () {
     params = MusicNotation.extend({
       skipXAPI: false
     }, params);
-    if (this.noteInputField.vibeInstance.getCore() == undefined) return
+    if (!this.noteInputField.vibeInstance.getCore()) return
     this.computeResults();
 
     var wrongCounter = 0
@@ -838,7 +844,7 @@ const MusicNotation = (function () {
     this.noteSolution?.parentNode?.removeChild(this.noteSolution);
   };
 
-  /**
+  /**c
    * Compute results. Compare output according to tasktype
    * @returns results als Map<number, string>. Number: arbitrary counting id; string: id element that is wrong
    */
@@ -901,7 +907,7 @@ const MusicNotation = (function () {
         //this.correct.push(answerHarms[i].id)
         correct = true
         //if(!new DOMParser().parseFromString(this.cleanMEI(this.studentMEI), "text/xml").querySelector(`#${answerHarms[i].id}`)?.classList.contains("original")) this.points += 1
-        if (!answerHarms[i].classList.contains("original")){
+        if (!answerHarms[i].classList.contains("original")) {
           this.points += 1
         }
       } else {
@@ -933,55 +939,60 @@ const MusicNotation = (function () {
 
     this.initScoringValues()
 
+
     /**
-     * Get timestamp for given note, so that other notes in chords or polyphone textures can be comapred.
-     * @param {*} note 
-     * @returns 
+     * 
+     * @param {Array<Element>} noteArray 
+     * @return {{layerMap: Map, timeMap: Map}} 
      */
-    function getTimestamp(note) {
-      // var layer = note.closest("layer")
-      // var elements = Array.from(layer.querySelectorAll("*[dur]"))
-      var layerN = note.closest("layer").getAttribute("n")
-      var staffN = note.closest("staff").getAttribute("n")
-      var elements = note.closest("section").querySelectorAll(`staff[n="${staffN}"] > layer[n="${layerN}"] > *[dur]`)
-      elements = Array.from(elements)
-      elements = elements.filter((v, i) => i <= elements.indexOf(note))
-      var tstamp = 0
-      elements.forEach(e => {
-        var dur = parseInt(e.getAttribute("dur"))
-        tstamp += 4 / dur
-        var dots = e.getAttribute("dots")
-        var add = dur
-        if (dots !== null) {
-          for (var i = 0; i < parseInt(dots); i++) {
-            add = add / 2
-            tstamp += add
-          }
+    function createNoteMappings(noteArray) {
+      //sort Notes by Layer
+      var layerMap = new Map()
+      var timeMap = new Map()
+      var matrix = new Map()
+      noteArray.forEach(n => {
+        var staffN = n.closest("staff").getAttribute("n")
+        var layerN = n.closest("layer").getAttribute("n")
+        var id = staffN + layerN
+        if (!layerMap.has(id)) {
+          layerMap.set(id, new Array())
         }
+
+        if (!matrix.has(id)) {
+          matrix.set(id, new Map())
+        }
+        layerMap.get(id).push(n)
       })
-      return tstamp
+
+      //set timestamps for note in each layer
+      layerMap.forEach((arr, id) => {
+        var tMap = new Map()
+        var prevDur = 1
+        var prevTstamp = 0
+        arr.forEach(n => {
+          var tstamp = prevTstamp + prevDur
+          tMap.set(tstamp, n)
+          if (!timeMap.has(tstamp)) {
+            timeMap.set(tstamp, new Array())
+          }
+          timeMap.get(tstamp).push(n)
+          matrix.get(id).set(tstamp, n)
+          prevTstamp = tstamp
+          prevDur = getDuration(n)
+
+        })
+        layerMap.set(id, tMap)
+      })
+      return { layerMap: layerMap, timeMap: timeMap, matrix: matrix }
     }
 
-    /**
-     * Create a map of timestamps for each element in the note array
-     * @param {*} noteArray 
-     * @returns 
-     */
-    function createTimeMap(noteArray) {
-      var map = new Map()
-      noteArray.forEach(n => {
-        const tstamp = getTimestamp(n)
-        if (!tstamp) {
-          console.error("no timestamp for", n)
-          return
-        }
-        if (!map.has(tstamp)) {
-          map.set(tstamp, new Array())
-        }
-        map.get(tstamp).push(n)
-      })
-
-      return map
+    function getDuration(note) {
+      var dur = 4 / parseInt(note.getAttribute("dur"))
+      if (note.getAttribute("dots")) {
+        var dots = parseInt(note.getAttribute("dots"))
+        if (dots > 0) dur += dots === 1 ? dur / 2 : dur * (1 + 1 / dots + 1 / (dots * dots - 1))
+      }
+      return dur
     }
 
     const that = this
@@ -989,170 +1000,130 @@ const MusicNotation = (function () {
       return Array.from(chord.querySelectorAll("note"))
     }
 
-    var modelTimeMap = createTimeMap(modelNotes)
-    var answerTimeMap = createTimeMap(answerNotes)
-
-    //delete trailing rests
-    modelTimeMap = Array.from(modelTimeMap).reverse()
-    var sliceIdx = []
-    for (let i = 0; i < modelTimeMap.length; i++) {
-      if (modelTimeMap[i][1][0].tagName === "rest") {
-        sliceIdx.push(i)
-      } else {
-        break
-      }
-    }
-    sliceIdx.forEach(_ => {
-      modelTimeMap = modelTimeMap.slice(1)
-    })
-    modelTimeMap = modelTimeMap.reverse()
-
-    answerTimeMap = Array.from(answerTimeMap).reverse();
-    var sliceIdx = [];
-
-    for (let i = 0; i < answerTimeMap.length; i++) {
-      if (answerTimeMap[i][1][0].tagName === "rest") {
-        sliceIdx.push(i);
-      } else {
-        break;
+    function getAttrs(note) {
+      return {
+        pname: note.getAttribute("pname"),
+        accid: note.getAttribute("accid") || note.getAttribute("accid.ges"),
+        oct: that.checkOctavePosition ? note.getAttribute("oct") : null
       }
     }
 
-    sliceIdx.forEach(_ => {
-      answerTimeMap = answerTimeMap.slice(1);
-    });
 
-    answerTimeMap = answerTimeMap.reverse();
+    // Timemaps exist for each layer
+    // var modelSequenceMaps = createNoteMappings(modelNotes).layerMap
+    // var answerSequenceMaps = createNoteMappings(answerNotes).layerMap
 
-    // All answer elemnts will be compared against the solution/ model based on the time stamp
-    //modelTimeMap.forEach((value, key) => {
-    Array.from(modelTimeMap).forEach((arr, idx) => {
-      //var answerNotes = answerTimeMap.get(key)
-      var answerNotes = Array.from(answerTimeMap)[idx] ? Array.from(answerTimeMap)[idx][1] : []
-      var possibleAnswerNotes = []
-      var possibleModelNotes = []
+    var modelMatrix = createNoteMappings(modelNotes).matrix
+    var answerMatrix = createNoteMappings(answerNotes).matrix
 
-      //each index in "value" contains one one
-      //value.forEach(mn => {
-      arr[1].forEach((mn, arrIdx) => {
-        // the same for answerNotes
-        
-        if (mn.tagName === "chord") {
-          possibleModelNotes = chordNotes(mn)
-        } else { // if mn is rest or note
-          possibleModelNotes = [mn]
+    var layerKeySet = new Set([...modelMatrix.keys(), ...answerMatrix.keys()])
+
+    var modelTimeSet = new Set();
+    modelMatrix.forEach((v, k) => v.keys().forEach(key => modelTimeSet.add(key)));
+
+    var answerTimeSet = new Set();
+    answerMatrix.forEach((v, k) => v.keys().forEach(key => answerTimeSet.add(key)));
+
+    var timeKeySet = new Set([...modelTimeSet, ...answerTimeSet]);
+
+    // var modelTimeMap = createNoteMappings(modelNotes).timeMap
+    // var answerTimeMap = createNoteMappings(answerNotes).timeMap
+
+    var missingNote = new Array()
+    var excessNote = new Array()
+    var foundNotePair = new Array()
+
+    layerKeySet.forEach(layerKey => {
+      timeKeySet.forEach(timeKey => {
+        var mn = modelMatrix.get(layerKey)
+        var an = answerMatrix.get(layerKey)
+
+        if (mn) {
+          mn = mn.get(timeKey)
+          if (mn) {
+            if (mn.tagName === "chord") {
+              mn = chordNotes(mn)
+            } else {
+              mn = [mn]
+            }
+            this.source.push(...mn)
+          }
         }
-      
-        //answerNotes.forEach(an => {
-          //compare an with mn
-          var an = answerNotes[arrIdx]
-          if (mn.tagName === "chord") {
-            //possibleModelNotes = chordNotes(mn)
-            if (an.tagName === "chord") {
-              possibleAnswerNotes = chordNotes(an)
+
+        if (an) {
+          an = an.get(timeKey)
+          if (an) {
+            if (an?.tagName === "chord") {
+              an = chordNotes(an)
             } else {
-              possibleAnswerNotes = [an]
-            }
-          } else { // if mn is rest or note
-            //possibleModelNotes = [mn]
-            if (an.tagName === "chord") {
-              possibleAnswerNotes = chordNotes(an)
-            } else {
-              possibleAnswerNotes = [an]
+              an = [an]
             }
           }
-        //})
+        }
 
-        this.source.push(...possibleModelNotes)
+        if (!mn) {
+          if (an) excessNote.push(...an)
+        }
 
-        var shiftPMNIdx = new Array()
-        var shiftPANIdx = new Array()
+        if (!an) {
+          if (mn) missingNote.push(...mn)
+        }
 
-        var foundNotePair = new Array()
-        var missingNote = new Array()
-        var excessNote = new Array()
+        if (mn && an) {
+          let categorizedAnswer = []
+          mn.forEach(m => {
+            if (!m) return
+            var modelAttrs = getAttrs(m)
 
-        // Collect all indezes and attributes of correct answers 
-        // These will be then used to compared the sets of elements in model notes and answer notes
-        possibleModelNotes.forEach((pmn, i) => {
-          var modelAttrs = {
-            pname: pmn.getAttribute("pname"),
-            accid: pmn.getAttribute("accid") || pmn.getAttribute("accid.ges"),
-            oct: this.checkOctavePosition ? pmn.getAttribute("oct") : null
-          }
+            an.forEach(a => {
+              if (!a) return
+              var answerAttrs = getAttrs(a)
 
-          possibleAnswerNotes.forEach((pan, j) => {
-            var answerAttrs = {
-              pname: pan.getAttribute("pname"),
-              accid: pan.getAttribute("accid") || pan.getAttribute("accid.ges"),
-              oct: this.checkOctavePosition ? pan.getAttribute("oct") : null
-            }
-
-            // Compare attributes of notes to 
-            if (modelAttrs.pname === answerAttrs.pname && modelAttrs.oct === answerAttrs.oct && modelAttrs.accid === answerAttrs.accid) {
-              shiftPMNIdx.push(i)
-              shiftPANIdx.push(j)
-              foundNotePair.push([pmn, pan])
-            }
+              // Compare attributes of notes to 
+              
+              if (modelAttrs.pname === answerAttrs.pname && modelAttrs.oct === answerAttrs.oct && modelAttrs.accid === answerAttrs.accid) {
+                foundNotePair.push([m, a])
+                categorizedAnswer.push(a)
+              }
+            })
           })
-        })
-
-        //first, eliminate all found notes from answer notes
-        // all answer notes that are not in the model set, are considered to be excess
-        shiftPANIdx.sort((a, b) => b - a);
-        for (let i = 0; i < shiftPANIdx.length; i++) {
-          let index = shiftPANIdx[i];
-          possibleAnswerNotes.splice(index, 1)
-        }// then declare all excess notes
-        possibleAnswerNotes.forEach(pan => { excessNote.push(pan) })
-
-
-        // find all found model notes
-        // all model notes that are not in the answer set will be considered missing notes
-        shiftPMNIdx.sort((a, b) => b - a);
-        for (let i = 0; i < shiftPMNIdx.length; i++) {
-          let index = shiftPMNIdx[i];
-          possibleModelNotes.splice(index, 1)
+          var uncategorizedAnswer = an.filter(a => !categorizedAnswer.some(c => c === a))
+          excessNote.push(...uncategorizedAnswer)
         }
-        possibleModelNotes.forEach(miss => missingNote.push(miss))
-
-        // fill response map and distribute points, based on array they are assigned to
-        foundNotePair.forEach(fap => {
-          if (missingNote.length > 0 || excessNote.length > 0) {
-            this.responseMap.set(this.responseIdx, { response: [...possibleAnswerNotes].join(","), correct: false })
-            return
-          } // do not award point if there are wrong notes in the chord. save chord to responseMap
-          this.responseMap.set(this.responseIdx, { response: fap[1], correct: true })
-          if (!fap[1].classList.contains("original")){
-            this.points += 1
-            console.log(this.points)
-           } // only award point if the element wasn't already present in the template
-          this.responseIdx += 1;
-        })
-
-        excessNote.forEach(e => {
-          this.dummySource.push(e)
-          this.responseMap.set(this.responseIdx, { response: e, correct: false })
-          this.responseIdx += 1;
-        })
-
-        missingNote.forEach(m => {
-          this.responseMap.set(this.responseIdx, { response: m, correct: false })
-          this.responseIdx += 1;
-        })
       })
+
+      //any note that is excess than the given example will be considered as wrong answer
+      // if (answerTimeMap.length > modelTimeMap.length) {
+      //   answerTimeMap.forEach((an, idx) => {
+      //     if (idx <= modelTimeMap.length - 1) return
+
+      //     this.source.push(undefined)
+      //     this.responseMap.set(this.responseIdx, { response: an[1].join(","), correct: false })
+      //     this.responseIdx += 1;
+      //   })
+      // }
     })
 
-    // any note that is excess than the given example will be considered as wrong answer
-    if(answerTimeMap.length > modelTimeMap.length){
-      answerTimeMap.forEach((an, idx) => {
-        if(idx <= modelTimeMap.length - 1) return
+    foundNotePair.forEach(fap => {
+      this.responseMap.set(this.responseIdx, { response: fap[1], correct: true })
+      if (!fap[1].classList.contains("original")) {
+        this.points += 1
+        console.log(this.points)
+      } // only award point if the element wasn't already present in the template
+      this.responseIdx += 1;
+    })
 
-        this.source.push(undefined)
-        this.responseMap.set(this.responseIdx, { response: an[1].join(","), correct: false })
-        this.responseIdx += 1;
-      })
-    }
+    excessNote.forEach(e => {
+      this.dummySource.push(e)
+      this.responseMap.set(this.responseIdx, { response: e, correct: false })
+      this.responseIdx += 1;
+      this.source.push(e)
+    })
+
+    missingNote.forEach(m => {
+      this.responseMap.set(this.responseIdx, { response: m, correct: false })
+      this.responseIdx += 1;
+    })
   }
 
 
@@ -1161,8 +1132,8 @@ const MusicNotation = (function () {
     var modelDoc = this.makeDoc(this.solutionMEI)
     var answerDoc = this.noteInputField?.getMei(true)
     if (!modelDoc || !answerDoc) return
-    var modelDurs = modelDoc.querySelectorAll("[dur]")
-    var answerDurs = answerDoc.querySelectorAll("[dur]")
+    var modelDurs = modelDoc.querySelectorAll("mRest, [dur]")
+    var answerDurs = answerDoc.querySelectorAll("mRest, [dur]")
 
     this.initScoringValues()
 
@@ -1199,7 +1170,7 @@ const MusicNotation = (function () {
         // this.response += "[,]" + this.responseIdx + "[.]" + this.responseIdx
         // this.correct.push(answerDurs[i].id)
         correct = true
-        if (!answerDurs[i].classList.contains("original")){
+        if (!answerDurs[i].classList.contains("original")) {
           this.points += 1
           console.log(this.points)
         }
@@ -1416,9 +1387,10 @@ const MusicNotation = (function () {
   MusicNotation.prototype.getxAPIDefinition = function () {
     var interactionType = "long-fill-in";
 
-    if (!this.noChecks) {
-      interactionType = "matching"
-    }
+    // to display the SVG even with matching based tasks (Responsepatterns won't be evaluated henceforth)
+    // if (!this.noChecks) {
+    //   interactionType = "matching"
+    // }
 
     const definition = {};
     definition.name = {};
@@ -1500,9 +1472,6 @@ const MusicNotation = (function () {
 
 
 
-
-
-
     /*
      * The official xAPI documentation discourages to use a correct response
      * pattern it if the criteria for a question are complex and correct
@@ -1516,17 +1485,22 @@ const MusicNotation = (function () {
 
   /**
    * Build xAPI answer event.
+   * @param {boolean} [scored=true] - flag whether or not the submition should be scored. If not scored, the response will be visible in the gradebook anyway.
    * @return {H5P.XAPIEvent} xAPI answer event.
    */
   MusicNotation.prototype.getXAPIAnswerEvent = function () {
     const xAPIEvent = this.createAnalysisXAPIEvent('answered');
-
-    xAPIEvent.setScoredResult(this.getScore(), this.getMaxScore(), this, true, this.isPassed());
-
-    xAPIEvent.data.statement.result.response = this.response//this.noteInputField?.getText();
-
+    xAPIEvent.setScoredResult(this.checkGrading ? this.getScore() : undefined, this.getMaxScore(), this, true, this.isPassed());
+    var svgContainer = this.noteInputField.getScoreContainer().querySelector("#svgContainer")
+    var serializedContainer = new XMLSerializer().serializeToString(svgContainer)
+    /*
+     * save container as base64 string to avoid html purifier in reporting. 
+     * Be sure to install the reporting patch first. https://github.com/H5P-MusicNotation/MusicNotation-Reporting-Patch-Moodle
+     */
+    xAPIEvent.data.statement.result.response = btoa(serializedContainer) //this.response || btoa(serializedContainer)
     return xAPIEvent;
   };
+
 
   /**
    * Extend an array just like JQuery's extend.

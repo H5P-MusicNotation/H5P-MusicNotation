@@ -3,8 +3,8 @@ import VIBE from 'vibe-editor';
 import {
   jQuery as $, JoubelUI as UI, Question
 }
-  from "./globals";
-import { uuidv4 } from 'vibe-editor/src/scripts/js/utils/random'
+from "./globals";
+import { uuidv4 } from 'vibe-editor/src/scripts/js/scripts/utils/random'
 
 
 // CSS Classes
@@ -160,11 +160,11 @@ export default class NoteInputField {
     var core = this.vibeInstance.getCore()
     var toolkit = core.getVerovioWrapper().getToolkit()
 
-    toolkit.setOptions({ // here we could set some options for verovio if needed
-      //pageWidth: vibeContainer.getBoundingClientRect().width,
-      adjustPageWidth: 1,
-      adjustPageHeight: 1
-    })
+    // toolkit.setOptions({ // here we could set some options for verovio if needed
+    //   //pageWidth: vibeContainer.getBoundingClientRect().width,
+    //   adjustPageWidth: 1,
+    //   adjustPageHeight: 1
+    // })
     core.loadData("", core.getCurrentMEI(false), false, "svg_output").then(() => {
       this.afterLoadCallback()
       this.adjustFrameResponsive(this.scoreContainer)
